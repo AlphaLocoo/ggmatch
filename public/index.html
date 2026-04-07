@@ -189,8 +189,8 @@ footer{border-top:1px solid var(--border);padding:2rem;display:flex;align-items:
     <p class="section-sub">Commence gratuitement, evolue quand tu veux.</p>
     <div class="pricing-grid">
       <div class="pricing-card"><div class="plan-name">Free</div><div class="plan-price">0<sup>€</sup></div><div class="plan-period">Pour toujours</div><ul class="plan-features"><li class="active"><span class="check">✓</span>1 match / jour</li><li class="active"><span class="check">✓</span>Tournois publics</li><li class="active"><span class="check">✓</span>Stats de base</li><li><span class="cross">✗</span>Coaching</li><li><span class="cross">✗</span>Vocal integre</li></ul><button class="btn-plan" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Commencer</button></div>
-      <div class="pricing-card popular"><div class="plan-name">Premium</div><div class="plan-price" style="color:var(--accent)">5<sup>€</sup></div><div class="plan-period">par mois sans engagement</div><ul class="plan-features"><li class="active"><span class="check">✓</span>Matchs illimites</li><li class="active"><span class="check">✓</span>Tournois exclusifs</li><li class="active"><span class="check">✓</span>Stats avancees</li><li class="active"><span class="check">✓</span>Vocal integre HD</li><li><span class="cross">✗</span>Coaching illimite</li></ul><button class="btn-plan primary" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">S'abonner</button></div>
-      <div class="pricing-card"><div class="plan-name">Pro</div><div class="plan-price" style="color:var(--accent2)">15<sup>€</sup></div><div class="plan-period">par mois sans engagement</div><ul class="plan-features"><li class="active"><span class="check">✓</span>Tout Premium inclus</li><li class="active"><span class="check">✓</span>Coaching illimite</li><li class="active"><span class="check">✓</span>Analyse gameplay IA</li><li class="active"><span class="check">✓</span>Priorite matchmaking</li><li class="active"><span class="check">✓</span>Support prioritaire</li></ul><button class="btn-plan" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Devenir Pro</button></div>
+      <div class="pricing-card popular"><div class="plan-name">Premium</div><div class="plan-price" style="color:var(--accent)">5<sup>€</sup></div><div class="plan-period">par mois sans engagement</div><ul class="plan-features"><li class="active"><span class="check">✓</span>Matchs illimites</li><li class="active"><span class="check">✓</span>Tournois exclusifs</li><li class="active"><span class="check">✓</span>Stats avancees</li><li class="active"><span class="check">✓</span>Vocal integre HD</li><li><span class="cross">✗</span>Coaching illimite</li></ul><button class="btn-plan primary" onclick="subscribe('price_1TJdVzQ0tiRGztD8s1xvugQJ')">S'abonner</button></div>
+      <div class="pricing-card"><div class="plan-name">Pro</div><div class="plan-price" style="color:var(--accent2)">15<sup>€</sup></div><div class="plan-period">par mois sans engagement</div><ul class="plan-features"><li class="active"><span class="check">✓</span>Tout Premium inclus</li><li class="active"><span class="check">✓</span>Coaching illimite</li><li class="active"><span class="check">✓</span>Analyse gameplay IA</li><li class="active"><span class="check">✓</span>Priorite matchmaking</li><li class="active"><span class="check">✓</span>Support prioritaire</li></ul><button class="btn-plan" onclick="subscribe('price_1TJdWhQ0tiRGztD8TrgxlgkL')">Devenir Pro</button></div>
     </div>
   </div>
 </div>
@@ -325,6 +325,15 @@ function setStatus(msg, type) {
   s.textContent = msg;
   s.style.color = type === 'error' ? '#ff5555' : type === 'success' ? '#00f5a0' : '#6b7280';
 }
+function subscribe(priceId) {
+  fetch('/create-checkout', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({priceId: priceId})
+  }).then(function(r) { return r.json(); })
+  .then(function(d) { window.location.href = d.url; });
+}
+
 </script>
 </body>
 </html>

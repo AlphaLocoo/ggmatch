@@ -3,7 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
+const stripe = require('stripe')('sk_test_51TJdSkQ0tiRGztD8BOEMQGQftAOtTVWUgN7fhnf8qmz8q8qR0okHuCh70kNyHecbtF2NppJ1exP9pXJlzLbQQVxF00YitK4P9D')
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -72,7 +72,17 @@ io.on('connection', (socket) => {
     if (i > -1) queue.splice(i, 1);
   });
 });
-
+app.post('/create-checkout', async (req, res) => {
+  const { priceId } = req.body;
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    payment_method_types: ['card'],
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: 'https://ggmatch-production.up.railway.app/?success=true',
+    cancel_url: 'https://ggmatch-production.up.railway.app/?cancelled=true',
+  });
+  res.json({ url: session.url });
+});
 server.listen(3000, () => {
   console.log('GGMatch tourne sur http://localhost:3000');
 });
