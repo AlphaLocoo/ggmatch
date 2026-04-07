@@ -3,249 +3,490 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GGMatch — Find Your Player</title>
+<title>Match — Find Your People</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#070910;--bg2:#0d1117;--accent:#00f5a0;--accent2:#00c8ff;--accent3:#ff3cac;--gold:#ffd700;--text:#e8eaf0;--muted:#6b7280;--border:rgba(255,255,255,0.07);--card:rgba(255,255,255,0.04)}
-body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;overflow-x:hidden}
-nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:64px;background:rgba(7,9,16,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
-.logo{font-family:'Rajdhani',sans-serif;font-size:1.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase}
-.logo span:first-child{color:var(--accent)}
-.nav-links{display:flex;gap:2rem;list-style:none}
-.nav-links a{color:var(--muted);text-decoration:none;font-size:.85rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;transition:color .2s}
-.nav-links a:hover{color:var(--accent)}
-.nav-actions{display:flex;gap:1rem;align-items:center}
-.btn{padding:.5rem 1.25rem;border-radius:4px;font-family:'Exo 2',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;border:none}
-.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
-.btn-ghost:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
-.btn-primary{background:var(--accent);color:#000;box-shadow:0 0 20px rgba(0,245,160,.3)}
-.btn-primary:hover{background:#00ffaa;box-shadow:0 0 30px rgba(0,245,160,.5);transform:translateY(-1px)}
-.btn-xl{padding:.9rem 2.5rem;font-size:.95rem;border-radius:6px}
-.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;text-align:center;padding:6rem 2rem 4rem;overflow:hidden}
-.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,245,160,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,160,.04) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 40%,transparent 100%);pointer-events:none}
-.hero-glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,245,160,.08) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);animation:pulse 4s ease-in-out infinite;pointer-events:none}
-@keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.1)}}
-.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,245,160,.1);border:1px solid rgba(0,245,160,.2);border-radius:100px;padding:.4rem 1rem;font-size:.75rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:2rem;position:relative}
-.hero-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 1.5s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.hero h1{font-family:'Rajdhani',sans-serif;font-size:clamp(3.5rem,10vw,8rem);font-weight:700;line-height:.9;letter-spacing:-2px;text-transform:uppercase;margin-bottom:1.5rem;position:relative}
-.line1{color:var(--text);display:block}
-.line2{display:block;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero p{font-size:1.1rem;color:var(--muted);max-width:520px;line-height:1.7;margin-bottom:2.5rem;position:relative}
-.hero-ctas{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;position:relative}
-.hero-stats{display:flex;gap:3rem;margin-top:5rem;position:relative}
-.stat{text-align:center}
-.stat-num{font-family:'Rajdhani',sans-serif;font-size:2.2rem;font-weight:700;color:var(--accent);line-height:1}
-.stat-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-top:.3rem}
-.section{padding:6rem 2rem;max-width:1200px;margin:0 auto}
-.section-label{font-size:.72rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:.75rem}
-.section-title{font-family:'Rajdhani',sans-serif;font-size:clamp(2rem,5vw,3.5rem);font-weight:700;text-transform:uppercase;letter-spacing:-1px;line-height:1;margin-bottom:1rem}
-.section-sub{color:var(--muted);font-size:1rem;line-height:1.7;max-width:500px;margin-bottom:3rem}
-.bg-alt{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:6rem 2rem}
-.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem}
-.feature-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2rem;transition:all .3s}
-.feature-card:hover{border-color:rgba(0,245,160,.2);transform:translateY(-4px)}
-.feature-icon{font-size:2.5rem;margin-bottom:1.25rem;display:block}
-.feature-card h3{font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:.75rem}
-.feature-card p{color:var(--muted);font-size:.9rem;line-height:1.7}
-.tag{display:inline-block;margin-top:1rem;padding:.25rem .75rem;border-radius:100px;font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase}
-.tag-green{background:rgba(0,245,160,.1);color:var(--accent)}
-.tag-blue{background:rgba(0,200,255,.1);color:var(--accent2)}
-.tag-pink{background:rgba(255,60,172,.1);color:var(--accent3)}
-.tournament-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;display:flex;align-items:center;gap:1.5rem;margin-bottom:1rem;transition:all .2s;cursor:pointer}
-.tournament-card:hover{border-color:rgba(0,245,160,.2);transform:translateX(4px)}
-.t-icon{font-size:2rem;width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:rgba(0,245,160,.06);border-radius:10px;border:1px solid rgba(0,245,160,.12);flex-shrink:0}
-.t-info{flex:1}
-.t-name{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.05rem;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.25rem}
-.t-meta{display:flex;gap:1rem;font-size:.75rem;color:var(--muted)}
-.t-prize{font-family:'Rajdhani',sans-serif;font-size:1.1rem;font-weight:700;color:var(--gold);text-align:right}
-.live-badge{display:inline-block;background:rgba(255,60,60,.15);color:#ff5555;font-size:.65rem;font-weight:700;letter-spacing:2px;padding:.2rem .5rem;border-radius:4px;border:1px solid rgba(255,60,60,.2);animation:blink 1.5s infinite}
-.soon-badge{display:inline-block;background:rgba(0,200,255,.1);color:var(--accent2);font-size:.65rem;font-weight:700;letter-spacing:2px;padding:.2rem .5rem;border-radius:4px}
-.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;max-width:900px}
-.pricing-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2.5rem 2rem;position:relative;overflow:hidden;transition:all .3s}
-.pricing-card.popular{border-color:var(--accent);background:rgba(0,245,160,.04)}
-.pricing-card.popular::before{content:'POPULAIRE';position:absolute;top:1rem;right:1rem;background:var(--accent);color:#000;font-size:.65rem;font-weight:700;letter-spacing:2px;padding:.25rem .6rem;border-radius:4px}
-.plan-name{font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:1rem}
-.plan-price{font-family:'Rajdhani',sans-serif;font-size:3.5rem;font-weight:700;line-height:1;margin-bottom:.25rem}
-.plan-price sup{font-size:1.5rem;vertical-align:top;margin-top:.75rem;display:inline-block;color:var(--muted)}
-.plan-period{font-size:.8rem;color:var(--muted);margin-bottom:2rem}
-.plan-features{list-style:none;margin-bottom:2rem}
-.plan-features li{padding:.5rem 0;font-size:.88rem;color:var(--muted);display:flex;align-items:center;gap:.6rem;border-bottom:1px solid var(--border)}
-.plan-features li:last-child{border-bottom:none}
-.plan-features li.active{color:var(--text)}
-.check{color:var(--accent)}.cross{color:#444}
-.btn-plan{width:100%;padding:.85rem;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted)}
-.btn-plan:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
-.btn-plan.primary{background:var(--accent);border-color:var(--accent);color:#000;box-shadow:0 0 20px rgba(0,245,160,.2)}
-.btn-plan.primary:hover{box-shadow:0 0 30px rgba(0,245,160,.4);transform:translateY(-1px)}
-.form-section{background:var(--bg2);border-top:1px solid var(--border);padding:6rem 2rem}
-.form-inner{max-width:440px;margin:0 auto}
-.form-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2.5rem;position:relative;overflow:hidden}
-.form-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
-.form-title{font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:1.5rem;text-align:center}
-.form-input{width:100%;padding:.85rem 1rem;margin-bottom:1rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-family:'Exo 2',sans-serif;font-size:.95rem;outline:none;transition:border .2s}
-.form-input:focus{border-color:var(--accent)}
-.form-input::placeholder{color:#4b5563}
-.form-btn{width:100%;padding:.85rem;border:none;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;margin-bottom:.75rem}
-.form-btn-primary{background:var(--accent);color:#000;box-shadow:0 0 20px rgba(0,245,160,.2)}
-.form-btn-primary:hover{box-shadow:0 0 30px rgba(0,245,160,.4);transform:translateY(-1px)}
-.form-btn-secondary{background:transparent;color:var(--muted);border:1px solid var(--border)}
-.form-btn-secondary:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
-#formStatus{text-align:center;color:var(--muted);margin-top:1rem;font-size:.9rem;min-height:1.2rem}
-.searching-anim{display:flex;align-items:center;justify-content:center;gap:.4rem;margin:1.5rem 0}
-.searching-anim span{width:10px;height:10px;border-radius:50%;background:var(--accent2);animation:bounce 1.2s infinite}
-.searching-anim span:nth-child(2){animation-delay:.2s}
-.searching-anim span:nth-child(3){animation-delay:.4s}
-@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-.match-badge{background:rgba(0,245,160,.08);border:1px solid rgba(0,245,160,.2);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;text-align:center}
-.match-game-name{font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:2px}
-.match-vs-text{font-size:.85rem;color:var(--muted);margin-top:.25rem}
-.match-vs-text strong{color:var(--accent2)}
-#messages{height:220px;overflow-y:auto;background:rgba(0,0,0,.3);border-radius:8px;padding:1rem;margin-bottom:1rem;border:1px solid var(--border)}
-#messages::-webkit-scrollbar{width:4px}
-#messages::-webkit-scrollbar-thumb{background:#222;border-radius:2px}
-.msg{margin-bottom:.6rem;font-size:.88rem;line-height:1.5}
-.msg .name{font-weight:700;margin-right:.4rem}
-.msg .name.me{color:var(--accent)}
-.msg .name.other{color:var(--accent2)}
-.msg .name.system{color:var(--gold)}
-.msg-row{display:flex;gap:.5rem}
-.msg-row .form-input{margin-bottom:0;flex:1}
-.msg-row .form-btn{width:auto;padding:.85rem 1.5rem;margin-bottom:0}
-footer{border-top:1px solid var(--border);padding:2rem;display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto}
-.footer-logo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.1rem;letter-spacing:2px}
-.footer-logo span{color:var(--accent)}
-.footer-links{display:flex;gap:1.5rem;list-style:none}
-.footer-links a{color:var(--muted);font-size:.8rem;text-decoration:none;transition:color .2s}
-.footer-links a:hover{color:var(--text)}
-.footer-copy{font-size:.75rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
-@media(max-width:768px){.nav-links{display:none}.hero-stats{gap:1.5rem}footer{flex-direction:column;gap:1rem;text-align:center}.footer-links{flex-wrap:wrap;justify-content:center}}
+:root {
+  --black: #050507;
+  --white: #f5f3ef;
+  --cream: #ede9e1;
+  --grey: #8a8a8a;
+  --gaming: #00ff87;
+  --music: #ff3cac;
+  --study: #ffd60a;
+  --language: #00c8ff;
+  --fitness: #ff6b35;
+  --creative: #b57bee;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--black); color: var(--white); font-family: 'DM Sans', sans-serif; overflow-x: hidden; cursor: none; }
+.cursor { width: 12px; height: 12px; background: var(--white); border-radius: 50%; position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999; mix-blend-mode: difference; }
+.cursor-follower { width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9998; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
+body::after { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.06'/%3E%3C/svg%3E"); pointer-events: none; z-index: 9997; opacity: 0.5; }
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 2rem 3rem; }
+.nav-logo { font-family: 'DM Serif Display', serif; font-size: 1.5rem; letter-spacing: -1px; color: var(--white); }
+.nav-links { display: flex; gap: 2.5rem; list-style: none; }
+.nav-links a { color: var(--grey); text-decoration: none; font-size: 0.8rem; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; transition: color 0.2s; }
+.nav-links a:hover { color: var(--white); }
+.nav-cta { background: var(--white); color: var(--black); border: none; padding: 0.65rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; cursor: none; transition: all 0.2s; border-radius: 2px; }
+.nav-cta:hover { background: var(--cream); transform: translateY(-1px); }
+.hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 3rem 5rem; position: relative; overflow: hidden; }
+.hero-number { position: absolute; top: 50%; right: -2rem; transform: translateY(-50%) rotate(90deg); font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 4px; color: var(--grey); text-transform: uppercase; white-space: nowrap; }
+.live-indicator { display: inline-flex; align-items: center; gap: 0.6rem; margin-bottom: 3rem; opacity: 0; animation: fadeUp 0.8s 0.2s ease forwards; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gaming); animation: pulse-dot 2s ease-in-out infinite; }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } }
+.live-text { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); }
+.live-count { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 3px; color: var(--white); }
+.hero-title { font-family: 'DM Serif Display', serif; font-size: clamp(5rem, 14vw, 13rem); line-height: 0.88; letter-spacing: -4px; margin-bottom: 3rem; opacity: 0; animation: fadeUp 1s 0.4s ease forwards; }
+.hero-title em { font-style: italic; color: var(--grey); }
+.hero-bottom { display: flex; align-items: flex-end; justify-content: space-between; opacity: 0; animation: fadeUp 0.8s 0.7s ease forwards; }
+.hero-desc { max-width: 380px; font-size: 1rem; line-height: 1.7; color: var(--grey); font-weight: 300; }
+.hero-desc strong { color: var(--white); font-weight: 500; }
+.hero-scroll { display: flex; align-items: center; gap: 1rem; font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); }
+.scroll-line { width: 60px; height: 1px; background: var(--grey); position: relative; overflow: hidden; }
+.scroll-line::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: var(--white); animation: scanline 2s ease-in-out infinite; }
+@keyframes scanline { 0% { left: -100%; } 100% { left: 100%; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+.section-divider { width: 100%; height: 1px; background: rgba(255,255,255,0.08); }
+.manifesto { padding: 8rem 3rem; display: grid; grid-template-columns: 1fr 2fr; gap: 4rem; align-items: start; max-width: 1400px; margin: 0 auto; }
+.manifesto-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); padding-top: 0.5rem; }
+.manifesto-text { font-family: 'DM Serif Display', serif; font-size: clamp(1.8rem, 3.5vw, 3rem); line-height: 1.3; letter-spacing: -0.5px; color: var(--white); }
+.manifesto-text em { font-style: italic; color: var(--grey); }
+.universes-header { padding: 0 3rem 4rem; max-width: 1400px; margin: 0 auto; display: flex; align-items: baseline; justify-content: space-between; }
+.universes-title { font-family: 'DM Serif Display', serif; font-size: clamp(2.5rem, 5vw, 4rem); letter-spacing: -2px; }
+.universes-count { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 3px; color: var(--grey); text-transform: uppercase; }
+.universes-grid { padding: 0; margin: 0 3rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); }
+.universe-card { background: var(--black); padding: 3rem; cursor: none; position: relative; overflow: hidden; transition: background 0.4s; }
+.universe-card::before { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.4s; }
+.universe-card:hover::before { opacity: 1; }
+.universe-card:hover { background: #0a0a0c; }
+.gaming-card::before { background: radial-gradient(circle at 0% 100%, rgba(0,255,135,0.06) 0%, transparent 60%); }
+.music-card::before { background: radial-gradient(circle at 0% 100%, rgba(255,60,172,0.06) 0%, transparent 60%); }
+.study-card::before { background: radial-gradient(circle at 0% 100%, rgba(255,214,10,0.06) 0%, transparent 60%); }
+.language-card::before { background: radial-gradient(circle at 0% 100%, rgba(0,200,255,0.06) 0%, transparent 60%); }
+.fitness-card::before { background: radial-gradient(circle at 0% 100%, rgba(255,107,53,0.06) 0%, transparent 60%); }
+.creative-card::before { background: radial-gradient(circle at 0% 100%, rgba(181,123,238,0.06) 0%, transparent 60%); }
+.card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4rem; }
+.card-index { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 2px; color: var(--grey); }
+.card-live { width: 6px; height: 6px; border-radius: 50%; opacity: 0.6; }
+.gaming-card .card-live { background: var(--gaming); animation: pulse-dot 2s infinite; opacity: 1; }
+.music-card .card-live { background: var(--music); }
+.study-card .card-live { background: var(--study); }
+.language-card .card-live { background: var(--language); }
+.fitness-card .card-live { background: var(--fitness); }
+.creative-card .card-live { background: var(--creative); }
+.card-emoji { font-size: 2.5rem; margin-bottom: 1.5rem; display: block; transition: transform 0.3s; }
+.universe-card:hover .card-emoji { transform: scale(1.1) rotate(-5deg); }
+.card-name { font-family: 'DM Serif Display', serif; font-size: 1.8rem; letter-spacing: -0.5px; margin-bottom: 0.5rem; transition: color 0.3s; }
+.gaming-card:hover .card-name { color: var(--gaming); }
+.music-card:hover .card-name { color: var(--music); }
+.study-card:hover .card-name { color: var(--study); }
+.language-card:hover .card-name { color: var(--language); }
+.fitness-card:hover .card-name { color: var(--fitness); }
+.creative-card:hover .card-name { color: var(--creative); }
+.card-sub { font-size: 0.8rem; color: var(--grey); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2rem; font-weight: 500; }
+.card-desc { font-size: 0.9rem; line-height: 1.7; color: rgba(255,255,255,0.45); margin-bottom: 2.5rem; }
+.card-stats { display: flex; gap: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.06); }
+.card-stat-num { font-family: 'DM Mono', monospace; font-size: 1.1rem; font-weight: 500; color: var(--white); display: block; }
+.card-stat-label { font-size: 0.65rem; color: var(--grey); letter-spacing: 2px; text-transform: uppercase; margin-top: 0.2rem; }
+.card-arrow { position: absolute; bottom: 2.5rem; right: 2.5rem; width: 32px; height: 32px; border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--grey); transition: all 0.3s; }
+.universe-card:hover .card-arrow { border-color: rgba(255,255,255,0.3); color: var(--white); transform: translate(3px, -3px); }
+.how { padding: 8rem 3rem; max-width: 1400px; margin: 0 auto; }
+.how-header { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: end; margin-bottom: 6rem; }
+.how-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); margin-bottom: 1.5rem; }
+.how-title { font-family: 'DM Serif Display', serif; font-size: clamp(2.5rem, 5vw, 4rem); letter-spacing: -2px; line-height: 1; }
+.how-sub { color: var(--grey); font-size: 1rem; line-height: 1.7; font-weight: 300; align-self: end; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); }
+.step { background: var(--black); padding: 3rem 2.5rem; transition: background 0.3s; }
+.step:hover { background: #0a0a0c; }
+.step-num { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; color: var(--grey); margin-bottom: 3rem; }
+.step-icon { font-size: 2rem; display: block; margin-bottom: 1.5rem; }
+.step-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; letter-spacing: -0.3px; margin-bottom: 0.75rem; }
+.step-desc { font-size: 0.85rem; line-height: 1.7; color: var(--grey); }
+.pricing { padding: 8rem 3rem; max-width: 1400px; margin: 0 auto; }
+.pricing-header { margin-bottom: 5rem; }
+.pricing-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); margin-bottom: 1.5rem; }
+.pricing-title { font-family: 'DM Serif Display', serif; font-size: clamp(2.5rem, 5vw, 4rem); letter-spacing: -2px; }
+.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); }
+.pricing-card { background: var(--black); padding: 3rem; transition: background 0.3s; position: relative; }
+.pricing-card.featured { background: var(--white); color: var(--black); }
+.pricing-card:not(.featured):hover { background: #0a0a0c; }
+.plan-tag { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); margin-bottom: 2rem; }
+.pricing-card.featured .plan-tag { color: rgba(0,0,0,0.4); }
+.plan-price { font-family: 'DM Serif Display', serif; font-size: 4.5rem; letter-spacing: -3px; line-height: 1; margin-bottom: 0.5rem; }
+.plan-period { font-size: 0.78rem; color: var(--grey); margin-bottom: 3rem; font-weight: 300; }
+.pricing-card.featured .plan-period { color: rgba(0,0,0,0.4); }
+.plan-features { list-style: none; margin-bottom: 3rem; }
+.plan-features li { padding: 0.75rem 0; font-size: 0.88rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); }
+.pricing-card.featured .plan-features li { border-bottom-color: rgba(0,0,0,0.08); color: rgba(0,0,0,0.6); }
+.plan-features li.on { color: var(--white); }
+.pricing-card.featured .plan-features li.on { color: var(--black); }
+.plan-features li:last-child { border-bottom: none; }
+.ck { color: #00c878; font-size: 0.7rem; }
+.cx { opacity: 0.25; font-size: 0.7rem; }
+.pricing-card.featured .ck { color: #008850; }
+.plan-btn { width: 100%; padding: 1rem; border-radius: 2px; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: none; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: var(--grey); }
+.plan-btn:hover { color: var(--white); border-color: rgba(255,255,255,0.4); }
+.plan-btn.featured-btn { background: var(--black); border-color: var(--black); color: var(--white); }
+.plan-btn.featured-btn:hover { background: #1a1a1a; }
+.cta-section { padding: 10rem 3rem; text-align: center; position: relative; overflow: hidden; }
+.cta-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 70%); pointer-events: none; }
+.cta-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); margin-bottom: 2rem; }
+.cta-title { font-family: 'DM Serif Display', serif; font-size: clamp(4rem, 10vw, 9rem); letter-spacing: -4px; line-height: 0.9; margin-bottom: 3rem; }
+.cta-title em { font-style: italic; color: var(--grey); }
+.cta-btn { display: inline-flex; align-items: center; gap: 1rem; background: var(--white); color: var(--black); border: none; padding: 1.2rem 3rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: none; transition: all 0.3s; border-radius: 2px; margin-bottom: 1.5rem; }
+.cta-btn:hover { background: var(--cream); transform: translateY(-3px); box-shadow: 0 20px 60px rgba(255,255,255,0.1); }
+.cta-sub { font-size: 0.8rem; color: var(--grey); letter-spacing: 1px; }
+footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; max-width: 1400px; margin: 0 auto; }
+.footer-logo { font-family: 'DM Serif Display', serif; font-size: 1.2rem; letter-spacing: -0.5px; }
+.footer-links { display: flex; gap: 2rem; list-style: none; }
+.footer-links a { color: var(--grey); font-size: 0.75rem; text-decoration: none; letter-spacing: 1px; text-transform: uppercase; transition: color 0.2s; font-weight: 500; }
+.footer-links a:hover { color: var(--white); }
+.footer-copy { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--grey); letter-spacing: 2px; }
+.ticker { padding: 1.5rem 0; background: var(--white); overflow: hidden; white-space: nowrap; }
+.ticker-inner { display: inline-flex; animation: ticker 20s linear infinite; }
+.ticker-item { font-family: 'DM Serif Display', serif; font-size: 1rem; color: var(--black); padding: 0 3rem; letter-spacing: -0.3px; }
+.ticker-item em { font-style: italic; color: rgba(0,0,0,0.35); }
+@keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+.stats-bar { padding: 4rem 3rem; max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); }
+.stat-item { background: var(--black); padding: 2.5rem; transition: background 0.3s; }
+.stat-item:hover { background: #0a0a0c; }
+.stat-big { font-family: 'DM Serif Display', serif; font-size: 3rem; letter-spacing: -2px; line-height: 1; margin-bottom: 0.5rem; color: var(--white); }
+.stat-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); }
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+  .universes-grid { grid-template-columns: repeat(2, 1fr); }
+  .steps { grid-template-columns: repeat(2, 1fr); }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .stats-bar { grid-template-columns: repeat(2, 1fr); }
+  .manifesto { grid-template-columns: 1fr; gap: 2rem; }
+  .how-header { grid-template-columns: 1fr; gap: 2rem; }
+}
+
+@media (max-width: 768px) {
+  body { cursor: auto; }
+  .cursor, .cursor-follower { display: none; }
+  nav { padding: 1.2rem 1.5rem; }
+  .nav-links { display: none; }
+  .hero { padding: 0 1.5rem 4rem; }
+  .hero-title { font-size: clamp(3.5rem, 15vw, 6rem); letter-spacing: -2px; }
+  .hero-bottom { flex-direction: column; gap: 2rem; align-items: flex-start; }
+  .hero-desc { font-size: 0.9rem; }
+  .manifesto { padding: 4rem 1.5rem; }
+  .manifesto-text { font-size: clamp(1.4rem, 5vw, 2rem); }
+  .universes-header { padding: 3rem 1.5rem 2rem; flex-direction: column; gap: 0.5rem; }
+  .universes-grid { grid-template-columns: 1fr; margin: 0 1.5rem; }
+  .universe-card { padding: 2rem 1.5rem; }
+  .stats-bar { grid-template-columns: repeat(2, 1fr); margin: 0 1.5rem; }
+  .how { padding: 4rem 1.5rem; }
+  .steps { grid-template-columns: 1fr; }
+  .pricing { padding: 4rem 1.5rem; }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .pricing-card { padding: 2rem 1.5rem; }
+  .cta-section { padding: 5rem 1.5rem; }
+  .cta-title { font-size: clamp(3rem, 13vw, 5rem); letter-spacing: -2px; }
+  footer { padding: 2rem 1.5rem; flex-direction: column; gap: 1.5rem; text-align: center; }
+  .footer-links { flex-wrap: wrap; justify-content: center; gap: 1rem; }
+  #jouer { padding: 4rem 1.5rem !important; }
+  .ticker-item { font-size: 0.9rem; padding: 0 2rem; }
+  .stat-big { font-size: 2.2rem; }
+  .hero-number { display: none; }
+}
 </style>
 </head>
 <body>
 
+<div class="cursor" id="cursor"></div>
+<div class="cursor-follower" id="cursorFollower"></div>
+
 <nav>
-  <div class="logo"><span>GG</span><span style="color:var(--text)">Match</span></div>
+  <div class="nav-logo">Match</div>
   <ul class="nav-links">
-    <li><a href="#features">Features</a></li>
-    <li><a href="#tournaments">Tournois</a></li>
+    <li><a href="#universes">Univers</a></li>
+    <li><a href="#how">Comment</a></li>
     <li><a href="#pricing">Tarifs</a></li>
   </ul>
-  <div class="nav-actions">
-    <button class="btn btn-ghost" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Se connecter</button>
-    <button class="btn btn-primary" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Jouer gratuit</button>
-  </div>
+  <button class="nav-cta" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Rejoindre</button>
 </nav>
 
-<div class="hero">
-  <div class="hero-grid"></div>
-  <div class="hero-glow"></div>
-  <div class="hero-badge">12 847 joueurs en ligne maintenant</div>
-  <h1><span class="line1">Find Your</span><span class="line2">Perfect Match</span></h1>
-  <p>Match aleatoire, tournois automatiques, coaching pro. La plateforme gaming qui connecte les meilleurs joueurs entre eux.</p>
-  <div class="hero-ctas">
-    <button class="btn btn-primary btn-xl" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Trouver un joueur</button>
-    <button class="btn btn-ghost btn-xl" onclick="document.getElementById('tournaments').scrollIntoView({behavior:'smooth'})">Voir les tournois</button>
+<section class="hero">
+  <div class="hero-number">Match — Find Your People — 2025</div>
+  <div class="live-indicator">
+    <div class="live-dot"></div>
+    <span class="live-text">En ligne maintenant</span>
+    <span class="live-count">— 68 247 personnes</span>
   </div>
-  <div class="hero-stats">
-    <div class="stat"><div class="stat-num">48K+</div><div class="stat-label">Joueurs inscrits</div></div>
-    <div class="stat"><div class="stat-num">200+</div><div class="stat-label">Jeux supportes</div></div>
-    <div class="stat"><div class="stat-num">3.2M€</div><div class="stat-label">Distribues en prix</div></div>
-    <div class="stat"><div class="stat-num">4.9★</div><div class="stat-label">Note joueurs</div></div>
+  <h1 class="hero-title">Find<br><em>Your</em><br>People.</h1>
+  <div class="hero-bottom">
+    <p class="hero-desc">Une passion. Trente secondes. <strong>Une rencontre.</strong><br>Match connecte instantanément les gens qui partagent la même passion.</p>
+    <div class="hero-scroll"><div class="scroll-line"></div>Découvrir</div>
+  </div>
+</section>
+
+<div class="ticker">
+  <div class="ticker-inner">
+    <span class="ticker-item">Gaming <em>×</em> GGMatch</span>
+    <span class="ticker-item">Musique <em>×</em> BeatMatch</span>
+    <span class="ticker-item">Études <em>×</em> StudyMatch</span>
+    <span class="ticker-item">Langues <em>×</em> TalkMatch</span>
+    <span class="ticker-item">Sport <em>×</em> GymMatch</span>
+    <span class="ticker-item">Créativité <em>×</em> CreateMatch</span>
+    <span class="ticker-item">Gaming <em>×</em> GGMatch</span>
+    <span class="ticker-item">Musique <em>×</em> BeatMatch</span>
+    <span class="ticker-item">Études <em>×</em> StudyMatch</span>
+    <span class="ticker-item">Langues <em>×</em> TalkMatch</span>
+    <span class="ticker-item">Sport <em>×</em> GymMatch</span>
+    <span class="ticker-item">Créativité <em>×</em> CreateMatch</span>
   </div>
 </div>
 
-<div class="section" id="features">
-  <div class="section-label">// Fonctionnalites</div>
-  <h2 class="section-title">Tout ce dont<br>tu as besoin</h2>
-  <p class="section-sub">Trois outils puissants, une seule plateforme.</p>
-  <div class="features-grid">
-    <div class="feature-card"><span class="feature-icon">⚡</span><h3>Match Aleatoire</h3><p>Sois mis en relation avec un joueur de ton niveau en moins de 30 secondes.</p><span class="tag tag-green">Instantane</span></div>
-    <div class="feature-card"><span class="feature-icon">🏆</span><h3>Tournois Auto</h3><p>Des tournois generes automatiquement chaque semaine. Le bracket se gere tout seul.</p><span class="tag tag-blue">Semaine</span></div>
-    <div class="feature-card"><span class="feature-icon">🎯</span><h3>Coaching Pro</h3><p>Acces a des joueurs Diamond+ qui analysent ton gameplay en une session.</p><span class="tag tag-pink">Premium</span></div>
-    <div class="feature-card"><span class="feature-icon">📊</span><h3>Stats Avancees</h3><p>Suis tes performances, ton win rate, et ta progression dans le temps.</p><span class="tag tag-green">Gratuit</span></div>
-    <div class="feature-card"><span class="feature-icon">🎙️</span><h3>Vocal integre</h3><p>Chat vocal HD integre directement dans la plateforme. Pas besoin de Discord.</p><span class="tag tag-blue">Pro</span></div>
-    <div class="feature-card"><span class="feature-icon">🌍</span><h3>200+ Jeux</h3><p>Valorant, LoL, Fortnite, FIFA, CS2, Apex... Tous les jeux populaires supportes.</p><span class="tag tag-green">Tous niveaux</span></div>
+<div class="stats-bar" style="margin: 0 3rem;">
+  <div class="stat-item"><div class="stat-big">68K+</div><div class="stat-label">Personnes en ligne</div></div>
+  <div class="stat-item"><div class="stat-big">6</div><div class="stat-label">Univers disponibles</div></div>
+  <div class="stat-item"><div class="stat-big">30s</div><div class="stat-label">Temps de match moyen</div></div>
+  <div class="stat-item"><div class="stat-big">4.9★</div><div class="stat-label">Note utilisateurs</div></div>
+</div>
+
+<div class="section-divider" style="margin: 0 3rem;"></div>
+
+<div class="manifesto">
+  <div class="manifesto-label">Notre vision</div>
+  <p class="manifesto-text">Le monde est plein de gens qui partagent ta passion.<br><em>Le problème, c'est de les trouver.</em><br>Match résout ça en trente secondes.</p>
+</div>
+
+<div class="section-divider"></div>
+
+<div class="universes-header" id="universes">
+  <h2 class="universes-title">Six univers.<br>Une plateforme.</h2>
+  <div class="universes-count">01 — 06</div>
+</div>
+
+<div class="universes-grid">
+  <div class="universe-card gaming-card">
+    <div class="card-top"><span class="card-index">01 / 06</span><div class="card-live"></div></div>
+    <span class="card-emoji">🎮</span>
+    <div class="card-name">GGMatch</div>
+    <div class="card-sub">Gaming & Esport</div>
+    <p class="card-desc">Trouve un joueur de ton niveau en 30 secondes. Matchmaking intelligent, tournois hebdo, coaching Diamond+.</p>
+    <div class="card-stats">
+      <div><span class="card-stat-num">24K</span><div class="card-stat-label">En ligne</div></div>
+      <div><span class="card-stat-num">200+</span><div class="card-stat-label">Jeux</div></div>
+    </div>
+    <div class="card-arrow">→</div>
+  </div>
+  <div class="universe-card music-card">
+    <div class="card-top"><span class="card-index">02 / 06</span><div class="card-live"></div></div>
+    <span class="card-emoji">🎵</span>
+    <div class="card-name">BeatMatch</div>
+    <div class="card-sub">Musique & Production</div>
+    <p class="card-desc">Collabore avec un musicien qui complète ton style. Producteur, rappeur, guitariste, DJ — trouve ton binôme créatif.</p>
+    <div class="card-stats">
+      <div><span class="card-stat-num">8K</span><div class="card-stat-label">En ligne</div></div>
+      <div><span class="card-stat-num">50+</span><div class="card-stat-label">Genres</div></div>
+    </div>
+    <div class="card-arrow">→</div>
+  </div>
+  <div class="universe-card study-card">
+    <div class="card-top"><span class="card-index">03 / 06</span><div class="card-live"></div></div>
+    <span class="card-emoji">📚</span>
+    <div class="card-name">StudyMatch</div>
+    <div class="card-sub">Etudes & Révisions</div>
+    <p class="card-desc">Révise avec quelqu'un qui prépare les mêmes examens. Maths, droit, médecine, code — le partenaire qu'il te faut.</p>
+    <div class="card-stats">
+      <div><span class="card-stat-num">15K</span><div class="card-stat-label">En ligne</div></div>
+      <div><span class="card-stat-num">30+</span><div class="card-stat-label">Matières</div></div>
+    </div>
+    <div class="card-arrow">→</div>
+  </div>
+  <div class="universe-card language-card">
+    <div class="card-top"><span class="card-index">04 / 06</span><div class="card-live"></div></div>
+    <span class="card-emoji">🌍</span>
+    <div class="card-name">TalkMatch</div>
+    <div class="card-sub">Langues & Culture</div>
+    <p class="card-desc">Pratique avec un natif. 40+ langues, échanges culturels authentiques, progression réelle.</p>
+    <div class="card-stats">
+      <div><span class="card-stat-num">18K</span><div class="card-stat-label">En ligne</div></div>
+      <div><span class="card-stat-num">40+</span><div class="card-stat-label">Langues</div></div>
+    </div>
+    <div class="card-arrow">→</div>
+  </div>
+  <div class="universe-card fitness-card">
+    <div class="card-top"><span class="card-index">05 / 06</span><div class="card-live"></div></div>
+    <span class="card-emoji">🏋️</span>
+    <div class="card-name">GymMatch</div>
+    <div class="card-sub">Sport & Fitness</div>
+    <p class="card-desc">Trouve un partenaire de sport qui a le même niveau et les mêmes objectifs. Ensemble c'est mieux.</p>
+    <div class="card-stats">
+      <div><span class="card-stat-num">9K</span><div class="card-stat-label">En ligne</div></div>
+      <div><span class="card-stat-num">20+</span><div class="card-stat-label">Sports</div></div>
+    </div>
+    <div class="card-arrow">→</div>
+  </div>
+  <div class="universe-card creative-card">
+    <div class="card-top"><span class="card-index">06 / 06</span><div class="card-live"></div></div>
+    <span class="card-emoji">🎨</span>
+    <div class="card-name">CreateMatch</div>
+    <div class="card-sub">Art & Créativité</div>
+    <p class="card-desc">Crée avec quelqu'un qui te challenge. Design, photo, vidéo, écriture — les meilleures œuvres naissent des meilleures rencontres.</p>
+    <div class="card-stats">
+      <div><span class="card-stat-num">6K</span><div class="card-stat-label">En ligne</div></div>
+      <div><span class="card-stat-num">15+</span><div class="card-stat-label">Disciplines</div></div>
+    </div>
+    <div class="card-arrow">→</div>
   </div>
 </div>
 
-<div class="bg-alt" id="tournaments">
-  <div style="max-width:1200px;margin:0 auto">
-    <div class="section-label">// Tournois en cours</div>
-    <h2 class="section-title">Cette semaine</h2>
-    <p class="section-sub">Tournois generes automatiquement, brackets instantanes.</p>
-    <div class="tournament-card"><div class="t-icon">🔫</div><div class="t-info"><div class="t-name">Valorant Weekly Cup <span class="live-badge">LIVE</span></div><div class="t-meta"><span>128 joueurs</span><span>EU West</span><span>Quarts de finale</span></div></div><div><div class="t-prize">500€</div><div style="font-size:.7rem;color:var(--muted);text-align:right">Prize pool</div></div></div>
-    <div class="tournament-card"><div class="t-icon">⚔️</div><div class="t-info"><div class="t-name">LoL 5v5 Weekend <span class="soon-badge">DEMAIN</span></div><div class="t-meta"><span>64 equipes</span><span>EU + FR</span><span>Inscriptions ouvertes</span></div></div><div><div class="t-prize">1 200€</div><div style="font-size:.7rem;color:var(--muted);text-align:right">Prize pool</div></div></div>
-    <div class="tournament-card"><div class="t-icon">⚽</div><div class="t-info"><div class="t-name">FC25 Champions <span class="soon-badge">SAM 14H</span></div><div class="t-meta"><span>256 joueurs</span><span>Global</span><span>Toutes consoles</span></div></div><div><div class="t-prize">800€</div><div style="font-size:.7rem;color:var(--muted);text-align:right">Prize pool</div></div></div>
+<div class="section-divider" style="margin: 0 3rem;"></div>
+
+<div class="how" id="how">
+  <div class="how-header">
+    <div>
+      <div class="how-label">Le processus</div>
+      <h2 class="how-title">Simple.<br><em>Radical.</em></h2>
+    </div>
+    <p class="how-sub">Quatre étapes. Moins de deux minutes. Une rencontre qui peut tout changer.</p>
+  </div>
+  <div class="steps">
+    <div class="step"><div class="step-num">— 01</div><span class="step-icon">👤</span><div class="step-title">Crée ton profil</div><p class="step-desc">Choisis ton univers, définis tes préférences. Deux minutes, pas plus.</p></div>
+    <div class="step"><div class="step-num">— 02</div><span class="step-icon">⚡</span><div class="step-title">Lance le match</div><p class="step-desc">Notre algorithme trouve la personne parfaite pour toi. En trente secondes.</p></div>
+    <div class="step"><div class="step-num">— 03</div><span class="step-icon">💬</span><div class="step-title">Connecte-toi</div><p class="step-desc">Chat, vocal HD, ou vidéo. Tout est intégré. Pas besoin d'autre appli.</p></div>
+    <div class="step"><div class="step-num">— 04</div><span class="step-icon">🏆</span><div class="step-title">Progresse</div><p class="step-desc">Tournois, coaching, stats. Monte en niveau dans ton univers.</p></div>
   </div>
 </div>
 
-<div class="bg-alt" id="pricing" style="border-top:none">
-  <div style="max-width:1200px;margin:0 auto">
-    <div class="section-label">// Abonnements</div>
-    <h2 class="section-title">Simple et transparent</h2>
-    <p class="section-sub">Commence gratuitement, evolue quand tu veux.</p>
-    <div class="pricing-grid">
-      <div class="pricing-card"><div class="plan-name">Free</div><div class="plan-price">0<sup>€</sup></div><div class="plan-period">Pour toujours</div><ul class="plan-features"><li class="active"><span class="check">✓</span>1 match / jour</li><li class="active"><span class="check">✓</span>Tournois publics</li><li class="active"><span class="check">✓</span>Stats de base</li><li><span class="cross">✗</span>Coaching</li><li><span class="cross">✗</span>Vocal integre</li></ul><button class="btn-plan" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Commencer</button></div>
-      <div class="pricing-card popular"><div class="plan-name">Premium</div><div class="plan-price" style="color:var(--accent)">5<sup>€</sup></div><div class="plan-period">par mois sans engagement</div><ul class="plan-features"><li class="active"><span class="check">✓</span>Matchs illimites</li><li class="active"><span class="check">✓</span>Tournois exclusifs</li><li class="active"><span class="check">✓</span>Stats avancees</li><li class="active"><span class="check">✓</span>Vocal integre HD</li><li><span class="cross">✗</span>Coaching illimite</li></ul><button class="btn-plan primary" onclick="subscribe('price_1TJdVzQ0tiRGztD8s1xvugQJ')">S'abonner</button></div>
-      <div class="pricing-card"><div class="plan-name">Pro</div><div class="plan-price" style="color:var(--accent2)">15<sup>€</sup></div><div class="plan-period">par mois sans engagement</div><ul class="plan-features"><li class="active"><span class="check">✓</span>Tout Premium inclus</li><li class="active"><span class="check">✓</span>Coaching illimite</li><li class="active"><span class="check">✓</span>Analyse gameplay IA</li><li class="active"><span class="check">✓</span>Priorite matchmaking</li><li class="active"><span class="check">✓</span>Support prioritaire</li></ul><button class="btn-plan" onclick="subscribe('price_1TJdWhQ0tiRGztD8TrgxlgkL')">Devenir Pro</button></div>
+<div class="section-divider"></div>
+
+<div class="pricing" id="pricing">
+  <div class="pricing-header">
+    <div class="pricing-label">Abonnements</div>
+    <h2 class="pricing-title">Un prix.<br><em>Tous les univers.</em></h2>
+  </div>
+  <div class="pricing-grid">
+    <div class="pricing-card">
+      <div class="plan-tag">Free — Pour toujours</div>
+      <div class="plan-price">0€</div>
+      <div class="plan-period">Gratuit pour toujours</div>
+      <ul class="plan-features">
+        <li class="on"><span class="ck">✓</span> 1 match par jour par univers</li>
+        <li class="on"><span class="ck">✓</span> Accès aux 6 univers</li>
+        <li class="on"><span class="ck">✓</span> Tournois publics</li>
+        <li><span class="cx">✗</span> Matchs illimités</li>
+        <li><span class="cx">✗</span> Chat vocal & vidéo HD</li>
+        <li><span class="cx">✗</span> Coaching</li>
+      </ul>
+      <button class="plan-btn" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Commencer gratuitement</button>
+    </div>
+    <div class="pricing-card featured">
+      <div class="plan-tag">Premium — Le plus populaire</div>
+      <div class="plan-price">9€</div>
+      <div class="plan-period">par mois · sans engagement</div>
+      <ul class="plan-features">
+        <li class="on"><span class="ck">✓</span> Matchs illimités</li>
+        <li class="on"><span class="ck">✓</span> Tous les univers débloqués</li>
+        <li class="on"><span class="ck">✓</span> Chat vocal & vidéo HD</li>
+        <li class="on"><span class="ck">✓</span> Tournois exclusifs</li>
+        <li class="on"><span class="ck">✓</span> Stats avancées</li>
+        <li><span class="cx">✗</span> Coaching illimité</li>
+      </ul>
+      <button class="plan-btn featured-btn" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">S'abonner maintenant</button>
+    </div>
+    <div class="pricing-card">
+      <div class="plan-tag">Pro — Pour les sérieux</div>
+      <div class="plan-price">19€</div>
+      <div class="plan-period">par mois · sans engagement</div>
+      <ul class="plan-features">
+        <li class="on"><span class="ck">✓</span> Tout Premium inclus</li>
+        <li class="on"><span class="ck">✓</span> Coaching illimité</li>
+        <li class="on"><span class="ck">✓</span> Analyse IA de ta progression</li>
+        <li class="on"><span class="ck">✓</span> Priorité dans le matchmaking</li>
+        <li class="on"><span class="ck">✓</span> Badge Pro visible</li>
+        <li class="on"><span class="ck">✓</span> Support prioritaire 24/7</li>
+      </ul>
+      <button class="plan-btn" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Devenir Pro</button>
     </div>
   </div>
 </div>
 
-<div class="form-section" id="jouer">
-  <div class="form-inner">
-    <div class="form-card">
-      <div id="authScreen">
-        <div class="form-title">Rejoindre la partie</div>
-        <input class="form-input" id="username" placeholder="Pseudo" autocomplete="off" />
-        <input class="form-input" id="password" type="password" placeholder="Mot de passe" autocomplete="off" />
-        <input class="form-input" id="game" placeholder="Ton jeu (ex: Valorant)" autocomplete="off" />
-        <button class="form-btn form-btn-primary" onclick="register()">Creer un compte</button>
-        <button class="form-btn form-btn-secondary" onclick="login()">Se connecter</button>
-        <div id="formStatus">Connecte-toi pour jouer !</div>
-      </div>
-      <div id="searchScreen" style="display:none;text-align:center;padding:1rem 0">
-        <div style="font-family:'Rajdhani',sans-serif;font-size:1.2rem;color:var(--accent2);margin-bottom:1rem;text-transform:uppercase;letter-spacing:2px">Recherche en cours</div>
-        <div style="color:var(--muted);font-size:.9rem">On cherche ton adversaire...</div>
-        <div class="searching-anim"><span></span><span></span><span></span></div>
-        <div style="font-size:.8rem;color:var(--muted)">Temps moyen : 15 secondes</div>
-      </div>
-      <div id="matchScreen" style="display:none">
-        <div class="match-badge">
-          <div class="match-game-name" id="matchGame">Valorant</div>
-          <div class="match-vs-text">VS <strong id="matchOpponent">...</strong></div>
-        </div>
-        <div id="messages"></div>
-        <div class="msg-row">
-          <input class="form-input" id="msgInput" placeholder="Ton message..." autocomplete="off" onkeypress="if(event.key==='Enter')sendMsg()" />
-          <button class="form-btn form-btn-primary" onclick="sendMsg()">GO</button>
-        </div>
-      </div>
+<div class="section-divider"></div>
+
+<div style="padding: 8rem 3rem; max-width: 600px; margin: 0 auto;" id="jouer">
+  <div class="pricing-label" style="margin-bottom: 2rem;">Rejoindre Match</div>
+  <h2 style="font-family:'DM Serif Display',serif;font-size:2.5rem;letter-spacing:-1px;margin-bottom:3rem;">Commence maintenant.<br><em style="color:var(--grey);">C'est gratuit.</em></h2>
+  <div id="authScreen">
+    <input id="username" placeholder="Pseudo" autocomplete="off" style="width:100%;padding:1rem 0;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.15);color:var(--white);font-family:'DM Sans',sans-serif;font-size:1rem;outline:none;margin-bottom:1.5rem;" />
+    <input id="password" type="password" placeholder="Mot de passe" autocomplete="off" style="width:100%;padding:1rem 0;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.15);color:var(--white);font-family:'DM Sans',sans-serif;font-size:1rem;outline:none;margin-bottom:1.5rem;" />
+    <input id="game" placeholder="Ta passion (ex: Valorant, Guitare...)" autocomplete="off" style="width:100%;padding:1rem 0;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.15);color:var(--white);font-family:'DM Sans',sans-serif;font-size:1rem;outline:none;margin-bottom:3rem;" />
+    <button onclick="register()" style="width:100%;padding:1.1rem;background:var(--white);color:var(--black);border:none;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-bottom:1rem;border-radius:2px;">Créer mon compte</button>
+    <button onclick="login()" style="width:100%;padding:1.1rem;background:transparent;color:var(--grey);border:1px solid rgba(255,255,255,0.1);font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border-radius:2px;">Se connecter</button>
+    <div id="formStatus" style="text-align:center;color:var(--grey);margin-top:1.5rem;font-size:0.85rem;min-height:1.2rem;"></div>
+  </div>
+  <div id="searchScreen" style="display:none;text-align:center;padding:3rem 0;">
+    <div style="font-family:'DM Serif Display',serif;font-size:2rem;letter-spacing:-1px;margin-bottom:1rem;">Recherche en cours<span id="dots">.</span></div>
+    <div style="color:var(--grey);font-size:0.85rem;">On cherche ta prochaine rencontre...</div>
+  </div>
+  <div id="matchScreen" style="display:none;">
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:4px;padding:2rem;margin-bottom:2rem;text-align:center;">
+      <div style="font-family:'DM Serif Display',serif;font-size:1.5rem;letter-spacing:-0.5px;margin-bottom:0.3rem;" id="matchGame">Match</div>
+      <div style="color:var(--grey);font-size:0.85rem;">VS <strong style="color:var(--white);" id="matchOpponent">...</strong></div>
+    </div>
+    <div id="messages" style="height:240px;overflow-y:auto;padding:1.5rem 0;margin-bottom:1.5rem;border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06);"></div>
+    <div style="display:flex;gap:1rem;">
+      <input id="msgInput" placeholder="Ton message..." autocomplete="off" onkeypress="if(event.key==='Enter')sendMsg()" style="flex:1;padding:1rem 0;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.15);color:var(--white);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;" />
+      <button onclick="sendMsg()" style="padding:0.8rem 1.5rem;background:var(--white);color:var(--black);border:none;font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border-radius:2px;">GO</button>
     </div>
   </div>
 </div>
 
-<div style="background:var(--bg2);border-top:1px solid var(--border);text-align:center;padding:8rem 2rem;position:relative;overflow:hidden">
-  <div style="position:absolute;width:800px;height:400px;background:radial-gradient(ellipse,rgba(0,245,160,.06) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none"></div>
-  <h2 style="font-family:'Rajdhani',sans-serif;font-size:clamp(2.5rem,7vw,5rem);font-weight:700;text-transform:uppercase;letter-spacing:-1px;line-height:1;margin-bottom:1.5rem;position:relative">Pret a<br><span style="background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">dominer ?</span></h2>
-  <p style="color:var(--muted);font-size:1rem;margin-bottom:2.5rem;position:relative">Rejoins 48 000 joueurs qui trouvent leurs equipiers sur GGMatch.</p>
-  <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;position:relative">
-    <button class="btn btn-primary btn-xl" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Creer mon compte</button>
-    <button class="btn btn-ghost btn-xl" onclick="document.getElementById('tournaments').scrollIntoView({behavior:'smooth'})">Voir les tournois</button>
-  </div>
+<div class="section-divider"></div>
+
+<div class="cta-section">
+  <div class="cta-bg"></div>
+  <div class="cta-label">Rejoindre la communauté</div>
+  <h2 class="cta-title">Pret<br><em>à trouver</em><br>tes people ?</h2>
+  <br>
+  <button class="cta-btn" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Commencer gratuitement →</button>
+  <br>
+  <div class="cta-sub">Gratuit pour toujours · Sans carte bancaire · 30 secondes</div>
 </div>
 
 <footer>
-  <div class="footer-logo"><span>GG</span>Match</div>
-  <ul class="footer-links"><li><a href="#">A propos</a></li><li><a href="#">Blog</a></li><li><a href="#">Support</a></li><li><a href="#">CGU</a></li></ul>
-  <div class="footer-copy">2025 GGMatch</div>
+  <div class="footer-logo">Match</div>
+  <ul class="footer-links">
+    <li><a href="#">A propos</a></li>
+    <li><a href="#">Blog</a></li>
+    <li><a href="#">Support</a></li>
+    <li><a href="#">CGU</a></li>
+  </ul>
+  <div class="footer-copy">© 2025 Match</div>
 </footer>
 
 <script>
-var socket = io();
+const cursor = document.getElementById('cursor');
+const follower = document.getElementById('cursorFollower');
+let mouseX = 0, mouseY = 0, followerX = 0, followerY = 0;
+document.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX; mouseY = e.clientY;
+  if (cursor) cursor.style.transform = 'translate(' + (mouseX-6) + 'px, ' + (mouseY-6) + 'px)';
+});
+function animateFollower() {
+  followerX += (mouseX - followerX - 20) * 0.1;
+  followerY += (mouseY - followerY - 20) * 0.1;
+  if (follower) follower.style.transform = 'translate(' + followerX + 'px, ' + followerY + 'px)';
+  requestAnimationFrame(animateFollower);
+}
+animateFollower();
+
+let dots = 0;
+setInterval(() => {
+  dots = (dots + 1) % 4;
+  const el = document.getElementById('dots');
+  if (el) el.textContent = '.'.repeat(dots + 1);
+}, 500);
+
+var socket = typeof io !== 'undefined' ? io() : null;
 var username, currentRoom;
 
 function register() {
@@ -253,67 +494,55 @@ function register() {
   var p = document.getElementById('password').value;
   var g = document.getElementById('game').value;
   if (!u || !p || !g) { setStatus('Remplis tous les champs !', 'error'); return; }
-  fetch('/register', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({username: u, password: p, games: [g]})
-  }).then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (d.message) { setStatus('Compte cree ! Connecte-toi maintenant.', 'success'); }
-    else { setStatus(d.error, 'error'); }
-  });
+  fetch('/register', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: u, password: p, games: [g]}) })
+  .then(function(r) { return r.json(); })
+  .then(function(d) { if (d.message) { setStatus('Compte créé ! Connecte-toi.', 'success'); } else { setStatus(d.error, 'error'); } });
 }
 
 function login() {
   var u = document.getElementById('username').value;
   var p = document.getElementById('password').value;
-  var g = document.getElementById('game').value || 'Valorant';
+  var g = document.getElementById('game').value || 'Match';
   if (!u || !p) { setStatus('Pseudo et mot de passe requis !', 'error'); return; }
-  fetch('/login', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({username: u, password: p})
-  }).then(function(r) { return r.json(); })
+  fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: u, password: p}) })
+  .then(function(r) { return r.json(); })
   .then(function(d) {
     if (d.token) {
       username = d.username;
       document.getElementById('authScreen').style.display = 'none';
       document.getElementById('searchScreen').style.display = 'block';
-      socket.emit('find_match', {username: username, game: g});
-    } else {
-      setStatus(d.error, 'error');
-    }
+      if (socket) socket.emit('find_match', {username: username, game: g});
+    } else { setStatus(d.error, 'error'); }
   });
 }
 
-socket.on('match_found', function(d) {
-  currentRoom = d.room;
-  var opp = d.players.filter(function(p) { return p !== username; })[0];
-  document.getElementById('searchScreen').style.display = 'none';
-  document.getElementById('matchScreen').style.display = 'block';
-  document.getElementById('matchGame').textContent = d.game;
-  document.getElementById('matchOpponent').textContent = opp;
-  addMsg('GGMatch', 'Match trouve ! Bonne partie contre ' + opp + ' !', 'system');
-});
+if (socket) {
+  socket.on('match_found', function(d) {
+    currentRoom = d.room;
+    var opp = d.players.filter(function(p) { return p !== username; })[0];
+    document.getElementById('searchScreen').style.display = 'none';
+    document.getElementById('matchScreen').style.display = 'block';
+    document.getElementById('matchGame').textContent = d.game;
+    document.getElementById('matchOpponent').textContent = opp;
+    addMsg('Match', 'Rencontre trouvée avec ' + opp + ' !', 'system');
+  });
+  socket.on('message', function(d) { addMsg(d.from, d.text, d.from === username ? 'me' : 'other'); });
+}
 
 function sendMsg() {
   var t = document.getElementById('msgInput').value;
-  if (!t) return;
+  if (!t || !socket) return;
   socket.emit('message', {room: currentRoom, text: t});
   document.getElementById('msgInput').value = '';
 }
 
-socket.on('message', function(d) {
-  addMsg(d.from, d.text, d.from === username ? 'me' : 'other');
-});
-
 function addMsg(from, text, type) {
   var div = document.createElement('div');
-  div.className = 'msg';
-  var s = document.createElement('span');
-  s.className = 'name ' + type;
-  s.textContent = from + ':';
-  div.appendChild(s);
+  div.style.cssText = 'margin-bottom:1rem;font-size:0.88rem;line-height:1.5;';
+  var name = document.createElement('span');
+  name.style.cssText = 'font-weight:600;margin-right:0.5rem;color:' + (type === 'me' ? '#00ff87' : type === 'system' ? '#ffd60a' : '#00c8ff') + ';';
+  name.textContent = from + ':';
+  div.appendChild(name);
   div.appendChild(document.createTextNode(' ' + text));
   var m = document.getElementById('messages');
   m.appendChild(div);
@@ -323,17 +552,14 @@ function addMsg(from, text, type) {
 function setStatus(msg, type) {
   var s = document.getElementById('formStatus');
   s.textContent = msg;
-  s.style.color = type === 'error' ? '#ff5555' : type === 'success' ? '#00f5a0' : '#6b7280';
-}
-function subscribe(priceId) {
-  fetch('/create-checkout', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({priceId: priceId})
-  }).then(function(r) { return r.json(); })
-  .then(function(d) { window.location.href = d.url; });
+  s.style.color = type === 'error' ? '#ff5555' : type === 'success' ? '#00ff87' : '#8a8a8a';
 }
 
+function subscribe(priceId) {
+  fetch('/create-checkout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({priceId: priceId}) })
+  .then(function(r) { return r.json(); })
+  .then(function(d) { if (d.url) window.location.href = d.url; });
+}
 </script>
 </body>
 </html>
