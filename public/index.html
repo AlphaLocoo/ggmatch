@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GGMatch — Find Your Player</title>
+<script src="/socket.io/socket.io.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#070910;--bg2:#0d1117;--accent:#00f5a0;--accent2:#00c8ff;--accent3:#ff3cac;--gold:#ffd700;--text:#e8eaf0;--muted:#6b7280;--border:rgba(255,255,255,0.07);--card:rgba(255,255,255,0.04)}
+body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;overflow-x:hidden}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:64px;background:rgba(7,9,16,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.logo{font-family:'Rajdhani',sans-serif;font-size:1.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.logo span:first-child{color:var(--accent)}
+.nav-links{display:flex;gap:2rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.85rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;transition:color .2s}
+.nav-links a:hover{color:var(--accent)}
+.nav-actions{display:flex;gap:1rem;align-items:center}
+.btn{padding:.5rem 1.25rem;border-radius:4px;font-family:'Exo 2',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;border:none}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.btn-primary{background:var(--accent);color:#000;box-shadow:0 0 20px rgba(0,245,160,.3)}
+.btn-primary:hover{background:#00ffaa;box-shadow:0 0 30px rgba(0,245,160,.5);transform:translateY(-1px)}
+.btn-xl{padding:.9rem 2.5rem;font-size:.95rem;border-radius:6px}
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;text-align:center;padding:6rem 2rem 4rem;overflow:hidden}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,245,160,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,160,.04) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 40%,transparent 100%);pointer-events:none}
+.hero-glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,245,160,.08) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);animation:pulse 4s ease-in-out infinite;pointer-events:none}
+@keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.1)}}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,245,160,.1);border:1px solid rgba(0,245,160,.2);border-radius:100px;padding:.4rem 1rem;font-size:.75rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:2rem;position:relative}
+.hero-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{font-family:'Rajdhani',sans-serif;font-size:clamp(3.5rem,10vw,8rem);font-weight:700;line-height:.9;letter-spacing:-2px;text-transform:uppercase;margin-bottom:1.5rem;position:relative}
+.line1{color:var(--text);display:block}
+.line2{display:block;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:1.1rem;color:var(--muted);max-width:520px;line-height:1.7;margin-bottom:2.5rem;position:relative}
+.hero-ctas{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;position:relative}
+.hero-stats{display:flex;gap:3rem;margin-top:5rem;position:relative}
+.stat{text-align:center}
+.stat-num{font-family:'Rajdhani',sans-serif;font-size:2.2rem;font-weight:700;color:var(--accent);line-height:1}
+.stat-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-top:.3rem}
+.section{padding:6rem 2rem;max-width:1200px;margin:0 auto}
+.section-label{font-size:.72rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:.75rem}
+.section-title{font-family:'Rajdhani',sans-serif;font-size:clamp(2rem,5vw,3.5rem);font-weight:700;text-transform:uppercase;letter-spacing:-1px;line-height:1;margin-bottom:1rem}
+.section-sub{color:var(--muted);font-size:1rem;line-height:1.7;max-width:500px;margin-bottom:3rem}
+.bg-alt{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:6rem 2rem}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem}
+.feature-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2rem;transition:all .3s}
+.feature-card:hover{border-color:rgba(0,245,160,.2);transform:translateY(-4px)}
+.feature-icon{font-size:2.5rem;margin-bottom:1.25rem;display:block}
+.feature-card h3{font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:.75rem}
+.feature-card p{color:var(--muted);font-size:.9rem;line-height:1.7}
+.tag{display:inline-block;margin-top:1rem;padding:.25rem .75rem;border-radius:100px;font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.tag-green{background:rgba(0,245,160,.1);color:var(--accent)}
+.tag-blue{background:rgba(0,200,255,.1);color:var(--accent2)}
+.tag-pink{background:rgba(255,60,172,.1);color:var(--accent3)}
+.tournament-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;display:flex;align-items:center;gap:1.5rem;margin-bottom:1rem;transition:all .2s;cursor:pointer}
+.tournament-card:hover{border-color:rgba(0,245,160,.2);transform:translateX(4px)}
+.t-icon{font-size:2rem;width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:rgba(0,245,160,.06);border-radius:10px;border:1px solid rgba(0,245,160,.12);flex-shrink:0}
+.t-info{flex:1}
+.t-name{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.05rem;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.25rem}
+.t-meta{display:flex;gap:1rem;font-size:.75rem;color:var(--muted)}
+.t-prize{font-family:'Rajdhani',sans-serif;font-size:1.1rem;font-weight:700;color:var(--gold);text-align:right}
+.live-badge{display:inline-block;background:rgba(255,60,60,.15);color:#ff5555;font-size:.65rem;font-weight:700;letter-spacing:2px;padding:.2rem .5rem;border-radius:4px;border:1px solid rgba(255,60,60,.2);animation:blink 1.5s infinite}
+.soon-badge{display:inline-block;background:rgba(0,200,255,.1);color:var(--accent2);font-size:.65rem;font-weight:700;letter-spacing:2px;padding:.2rem .5rem;border-radius:4px}
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;max-width:900px}
+.pricing-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2.5rem 2rem;position:relative;overflow:hidden;transition:all .3s}
+.pricing-card.popular{border-color:var(--accent);background:rgba(0,245,160,.04)}
+.pricing-card.popular::before{content:'POPULAIRE';position:absolute;top:1rem;right:1rem;background:var(--accent);color:#000;font-size:.65rem;font-weight:700;letter-spacing:2px;padding:.25rem .6rem;border-radius:4px}
+.plan-name{font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:1rem}
+.plan-price{font-family:'Rajdhani',sans-serif;font-size:3.5rem;font-weight:700;line-height:1;margin-bottom:.25rem}
+.plan-price sup{font-size:1.5rem;vertical-align:top;margin-top:.75rem;display:inline-block;color:var(--muted)}
+.plan-period{font-size:.8rem;color:var(--muted);margin-bottom:2rem}
+.plan-features{list-style:none;margin-bottom:2rem}
+.plan-features li{padding:.5rem 0;font-size:.88rem;color:var(--muted);display:flex;align-items:center;gap:.6rem;border-bottom:1px solid var(--border)}
+.plan-features li:last-child{border-bottom:none}
+.plan-features li.active{color:var(--text)}
+.check{color:var(--accent)}.cross{color:#444}
+.btn-plan{width:100%;padding:.85rem;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:transparent;color:var(--muted)}
+.btn-plan:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.btn-plan.primary{background:var(--accent);border-color:var(--accent);color:#000;box-shadow:0 0 20px rgba(0,245,160,.2)}
+.btn-plan.primary:hover{box-shadow:0 0 30px rgba(0,245,160,.4);transform:translateY(-1px)}
+.form-section{background:var(--bg2);border-top:1px solid var(--border);padding:6rem 2rem}
+.form-inner{max-width:440px;margin:0 auto}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2.5rem;position:relative;overflow:hidden}
+.form-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.form-title{font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:1.5rem;text-align:center}
+.form-input{width:100%;padding:.85rem 1rem;margin-bottom:1rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-family:'Exo 2',sans-serif;font-size:.95rem;outline:none;transition:border .2s}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:#4b5563}
+.form-btn{width:100%;padding:.85rem;border:none;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;margin-bottom:.75rem}
+.form-btn-primary{background:var(--accent);color:#000;box-shadow:0 0 20px rgba(0,245,160,.2)}
+.form-btn-primary:hover{box-shadow:0 0 30px rgba(0,245,160,.4);transform:translateY(-1px)}
+.form-btn-secondary{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.form-btn-secondary:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+#formStatus{text-align:center;color:var(--muted);margin-top:1rem;font-size:.9rem;min-height:1.2rem}
+.searching-anim{display:flex;align-items:center;justify-content:center;gap:.4rem;margin:1.5rem 0}
+.searching-anim span{width:10px;height:10px;border-radius:50%;background:var(--accent2);animation:bounce 1.2s infinite}
+.searching-anim span:nth-child(2){animation-delay:.2s}
+.searching-anim span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.match-badge{background:rgba(0,245,160,.08);border:1px solid rgba(0,245,160,.2);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;text-align:center}
+.match-game-name{font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:2px}
+.match-vs-text{font-size:.85rem;color:var(--muted);margin-top:.25rem}
+.match-vs-text strong{color:var(--accent2)}
+#messages{height:220px;overflow-y:auto;background:rgba(0,0,0,.3);border-radius:8px;padding:1rem;margin-bottom:1rem;border:1px solid var(--border)}
+#messages::-webkit-scrollbar{width:4px}
+#messages::-webkit-scrollbar-thumb{background:#222;border-radius:2px}
+.msg{margin-bottom:.6rem;font-size:.88rem;line-height:1.5}
+.msg .name{font-weight:700;margin-right:.4rem}
+.msg .name.me{color:var(--accent)}
+.msg .name.other{color:var(--accent2)}
+.msg .name.system{color:var(--gold)}
+.msg-row{display:flex;gap:.5rem}
+.msg-row .form-input{margin-bottom:0;flex:1}
+.msg-row .form-btn{width:auto;padding:.85rem 1.5rem;margin-bottom:0}
+footer{border-top:1px solid var(--border);padding:2rem;display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto}
+.footer-logo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.1rem;letter-spacing:2px}
+.footer-logo span{color:var(--accent)}
+.footer-links{display:flex;gap:1.5rem;list-style:none}
+.footer-links a{color:var(--muted);font-size:.8rem;text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:var(--text)}
+.footer-copy{font-size:.75rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+@media(max-width:768px){.nav-links{display:none}.hero-stats{gap:1.5rem}footer{flex-direction:column;gap:1rem;text-align:center}.footer-links{flex-wrap:wrap;justify-content:center}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo"><span>GG</span><span style="color:var(--text)">Match</span></div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#tournaments">Tournois</a></li>
+    <li><a href="#pricing">Tarifs</a></li>
+  </ul>
+  <div class="nav-actions">
+    <button class="btn btn-ghost" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Se connecter</button>
+    <button class="btn btn-primary" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Jouer gratuit</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-badge">12 847 joueurs en ligne maintenant</div>
+  <h1><span class="line1">Find Your</span><span class="line2">Perfect Match</span></h1>
+  <p>Match aleatoire, tournois automatiques, coaching pro. La plateforme gaming qui connecte les meilleurs joueurs entre eux.</p>
+  <div class="hero-ctas">
+    <button class="btn btn-primary btn-xl" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Trouver un joueur</button>
+    <button class="btn btn-ghost btn-xl" onclick="document.getElementById('tournaments').scrollIntoView({behavior:'smooth'})">Voir les tournois</button>
+  </div>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-num">48K+</div><div class="stat-label">Joueurs inscrits</div></div>
+    <div class="stat"><div class="stat-num">200+</div><div class="stat-label">Jeux supportes</div></div>
+    <div class="stat"><div class="stat-num">3.2M€</div><div class="stat-label">Distribues en prix</div></div>
+    <div class="stat"><div class="stat-num">4.9★</div><div class="stat-label">Note joueurs</div></div>
+  </div>
+</div>
+
+<div class="section" id="features">
+  <div class="section-label">// Fonctionnalites</div>
+  <h2 class="section-title">Tout ce dont<br>tu as besoin</h2>
+  <p class="section-sub">Trois outils puissants, une seule plateforme.</p>
+  <div class="features-grid">
+    <div class="feature-card"><span class="feature-icon">⚡</span><h3>Match Aleatoire</h3><p>Sois mis en relation avec un joueur de ton niveau en moins de 30 secondes.</p><span class="tag tag-green">Instantane</span></div>
+    <div class="feature-card"><span class="feature-icon">🏆</span><h3>Tournois Auto</h3><p>Des tournois generes automatiquement chaque semaine. Le bracket se gere tout seul.</p><span class="tag tag-blue">Semaine</span></div>
+    <div class="feature-card"><span class="feature-icon">🎯</span><h3>Coaching Pro</h3><p>Acces a des joueurs Diamond+ qui analysent ton gameplay en une session.</p><span class="tag tag-pink">Premium</span></div>
+    <div class="feature-card"><span class="feature-icon">📊</span><h3>Stats Avancees</h3><p>Suis tes performances, ton win rate, et ta progression dans le temps.</p><span class="tag tag-green">Gratuit</span></div>
+    <div class="feature-card"><span class="feature-icon">🎙️</span><h3>Vocal integre</h3><p>Chat vocal HD integre directement dans la plateforme. Pas besoin de Discord.</p><span class="tag tag-blue">Pro</span></div>
+    <div class="feature-card"><span class="feature-icon">🌍</span><h3>200+ Jeux</h3><p>Valorant, LoL, Fortnite, FIFA, CS2, Apex... Tous les jeux populaires supportes.</p><span class="tag tag-green">Tous niveaux</span></div>
+  </div>
+</div>
+
+<div class="bg-alt" id="tournaments">
+  <div style="max-width:1200px;margin:0 auto">
+    <div class="section-label">// Tournois en cours</div>
+    <h2 class="section-title">Cette semaine</h2>
+    <p class="section-sub">Tournois generes automatiquement, brackets instantanes.</p>
+    <div class="tournament-card"><div class="t-icon">🔫</div><div class="t-info"><div class="t-name">Valorant Weekly Cup <span class="live-badge">LIVE</span></div><div class="t-meta"><span>128 joueurs</span><span>EU West</span><span>Quarts de finale</span></div></div><div><div class="t-prize">500€</div><div style="font-size:.7rem;color:var(--muted);text-align:right">Prize pool</div></div></div>
+    <div class="tournament-card"><div class="t-icon">⚔️</div><div class="t-info"><div class="t-name">LoL 5v5 Weekend <span class="soon-badge">DEMAIN</span></div><div class="t-meta"><span>64 equipes</span><span>EU + FR</span><span>Inscriptions ouvertes</span></div></div><div><div class="t-prize">1 200€</div><div style="font-size:.7rem;color:var(--muted);text-align:right">Prize pool</div></div></div>
+    <div class="tournament-card"><div class="t-icon">⚽</div><div class="t-info"><div class="t-name">FC25 Champions <span class="soon-badge">SAM 14H</span></div><div class="t-meta"><span>256 joueurs</span><span>Global</span><span>Toutes consoles</span></div></div><div><div class="t-prize">800€</div><div style="font-size:.7rem;color:var(--muted);text-align:right">Prize pool</div></div></div>
+  </div>
+</div>
+
+<div class="bg-alt" id="pricing" style="border-top:none">
+  <div style="max-width:1200px;margin:0 auto">
+    <div class="section-label">// Abonnements</div>
+    <h2 class="section-title">Simple et transparent</h2>
+    <p class="section-sub">Commence gratuitement, evolue quand tu veux.</p>
+    <div class="pricing-grid">
+      <div class="pricing-card"><div class="plan-name">Free</div><div class="plan-price">0<sup>€</sup></div><div class="plan-period">Pour toujours</div><ul class="plan-features"><li class="active"><span class="check">✓</span>1 match / jour</li><li class="active"><span class="check">✓</span>Tournois publics</li><li class="active"><span class="check">✓</span>Stats de base</li><li><span class="cross">✗</span>Coaching</li><li><span class="cross">✗</span>Vocal integre</li></ul><button class="btn-plan" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Commencer</button></div>
+      <div class="pricing-card popular"><div class="plan-name">Premium</div><div class="plan-price" style="color:var(--accent)">5<sup>€</sup></div><div class="plan-period">par mois sans engagement</div><ul class="plan-features"><li class="active"><span class="check">✓</span>Matchs illimites</li><li class="active"><span class="check">✓</span>Tournois exclusifs</li><li class="active"><span class="check">✓</span>Stats avancees</li><li class="active"><span class="check">✓</span>Vocal integre HD</li><li><span class="cross">✗</span>Coaching illimite</li></ul><button class="btn-plan primary" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">S'abonner</button></div>
+      <div class="pricing-card"><div class="plan-name">Pro</div><div class="plan-price" style="color:var(--accent2)">15<sup>€</sup></div><div class="plan-period">par mois sans engagement</div><ul class="plan-features"><li class="active"><span class="check">✓</span>Tout Premium inclus</li><li class="active"><span class="check">✓</span>Coaching illimite</li><li class="active"><span class="check">✓</span>Analyse gameplay IA</li><li class="active"><span class="check">✓</span>Priorite matchmaking</li><li class="active"><span class="check">✓</span>Support prioritaire</li></ul><button class="btn-plan" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Devenir Pro</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="form-section" id="jouer">
+  <div class="form-inner">
+    <div class="form-card">
+      <div id="authScreen">
+        <div class="form-title">Rejoindre la partie</div>
+        <input class="form-input" id="username" placeholder="Pseudo" autocomplete="off" />
+        <input class="form-input" id="password" type="password" placeholder="Mot de passe" autocomplete="off" />
+        <input class="form-input" id="game" placeholder="Ton jeu (ex: Valorant)" autocomplete="off" />
+        <button class="form-btn form-btn-primary" onclick="register()">Creer un compte</button>
+        <button class="form-btn form-btn-secondary" onclick="login()">Se connecter</button>
+        <div id="formStatus">Connecte-toi pour jouer !</div>
+      </div>
+      <div id="searchScreen" style="display:none;text-align:center;padding:1rem 0">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:1.2rem;color:var(--accent2);margin-bottom:1rem;text-transform:uppercase;letter-spacing:2px">Recherche en cours</div>
+        <div style="color:var(--muted);font-size:.9rem">On cherche ton adversaire...</div>
+        <div class="searching-anim"><span></span><span></span><span></span></div>
+        <div style="font-size:.8rem;color:var(--muted)">Temps moyen : 15 secondes</div>
+      </div>
+      <div id="matchScreen" style="display:none">
+        <div class="match-badge">
+          <div class="match-game-name" id="matchGame">Valorant</div>
+          <div class="match-vs-text">VS <strong id="matchOpponent">...</strong></div>
+        </div>
+        <div id="messages"></div>
+        <div class="msg-row">
+          <input class="form-input" id="msgInput" placeholder="Ton message..." autocomplete="off" onkeypress="if(event.key==='Enter')sendMsg()" />
+          <button class="form-btn form-btn-primary" onclick="sendMsg()">GO</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="background:var(--bg2);border-top:1px solid var(--border);text-align:center;padding:8rem 2rem;position:relative;overflow:hidden">
+  <div style="position:absolute;width:800px;height:400px;background:radial-gradient(ellipse,rgba(0,245,160,.06) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none"></div>
+  <h2 style="font-family:'Rajdhani',sans-serif;font-size:clamp(2.5rem,7vw,5rem);font-weight:700;text-transform:uppercase;letter-spacing:-1px;line-height:1;margin-bottom:1.5rem;position:relative">Pret a<br><span style="background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">dominer ?</span></h2>
+  <p style="color:var(--muted);font-size:1rem;margin-bottom:2.5rem;position:relative">Rejoins 48 000 joueurs qui trouvent leurs equipiers sur GGMatch.</p>
+  <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;position:relative">
+    <button class="btn btn-primary btn-xl" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Creer mon compte</button>
+    <button class="btn btn-ghost btn-xl" onclick="document.getElementById('tournaments').scrollIntoView({behavior:'smooth'})">Voir les tournois</button>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo"><span>GG</span>Match</div>
+  <ul class="footer-links"><li><a href="#">A propos</a></li><li><a href="#">Blog</a></li><li><a href="#">Support</a></li><li><a href="#">CGU</a></li></ul>
+  <div class="footer-copy">2025 GGMatch</div>
+</footer>
+
+<script>
+var socket = io();
+var username, currentRoom;
+
+function register() {
+  var u = document.getElementById('username').value;
+  var p = document.getElementById('password').value;
+  var g = document.getElementById('game').value;
+  if (!u || !p || !g) { setStatus('Remplis tous les champs !', 'error'); return; }
+  fetch('/register', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username: u, password: p, games: [g]})
+  }).then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.message) { setStatus('Compte cree ! Connecte-toi maintenant.', 'success'); }
+    else { setStatus(d.error, 'error'); }
+  });
+}
+
+function login() {
+  var u = document.getElementById('username').value;
+  var p = document.getElementById('password').value;
+  var g = document.getElementById('game').value || 'Valorant';
+  if (!u || !p) { setStatus('Pseudo et mot de passe requis !', 'error'); return; }
+  fetch('/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username: u, password: p})
+  }).then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.token) {
+      username = d.username;
+      document.getElementById('authScreen').style.display = 'none';
+      document.getElementById('searchScreen').style.display = 'block';
+      socket.emit('find_match', {username: username, game: g});
+    } else {
+      setStatus(d.error, 'error');
+    }
+  });
+}
+
+socket.on('match_found', function(d) {
+  currentRoom = d.room;
+  var opp = d.players.filter(function(p) { return p !== username; })[0];
+  document.getElementById('searchScreen').style.display = 'none';
+  document.getElementById('matchScreen').style.display = 'block';
+  document.getElementById('matchGame').textContent = d.game;
+  document.getElementById('matchOpponent').textContent = opp;
+  addMsg('GGMatch', 'Match trouve ! Bonne partie contre ' + opp + ' !', 'system');
+});
+
+function sendMsg() {
+  var t = document.getElementById('msgInput').value;
+  if (!t) return;
+  socket.emit('message', {room: currentRoom, text: t});
+  document.getElementById('msgInput').value = '';
+}
+
+socket.on('message', function(d) {
+  addMsg(d.from, d.text, d.from === username ? 'me' : 'other');
+});
+
+function addMsg(from, text, type) {
+  var div = document.createElement('div');
+  div.className = 'msg';
+  var s = document.createElement('span');
+  s.className = 'name ' + type;
+  s.textContent = from + ':';
+  div.appendChild(s);
+  div.appendChild(document.createTextNode(' ' + text));
+  var m = document.getElementById('messages');
+  m.appendChild(div);
+  m.scrollTop = m.scrollHeight;
+}
+
+function setStatus(msg, type) {
+  var s = document.getElementById('formStatus');
+  s.textContent = msg;
+  s.style.color = type === 'error' ? '#ff5555' : type === 'success' ? '#00f5a0' : '#6b7280';
+}
+</script>
+</body>
+</html>
