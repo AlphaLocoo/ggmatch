@@ -5,197 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Match — Find Your People</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 <script src="/socket.io/socket.io.js"></script>
-<style>
-:root {
-  --black: #050507;
-  --white: #f5f3ef;
-  --cream: #ede9e1;
-  --grey: #8a8a8a;
-  --gaming: #00ff87;
-  --music: #ff3cac;
-  --study: #ffd60a;
-  --language: #00c8ff;
-  --fitness: #ff6b35;
-  --creative: #b57bee;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { background: var(--black); color: var(--white); font-family: 'DM Sans', sans-serif; overflow-x: hidden; cursor: none; }
-.cursor { width: 12px; height: 12px; background: var(--white); border-radius: 50%; position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999; mix-blend-mode: difference; }
-.cursor-follower { width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9998; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
-body::after { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.06'/%3E%3C/svg%3E"); pointer-events: none; z-index: 9997; opacity: 0.5; }
-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 2rem 3rem; }
-.nav-logo { font-family: 'DM Serif Display', serif; font-size: 1.5rem; letter-spacing: -1px; color: var(--white); }
-.nav-links { display: flex; gap: 2.5rem; list-style: none; }
-.nav-links a { color: var(--grey); text-decoration: none; font-size: 0.8rem; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; transition: color 0.2s; }
-.nav-links a:hover { color: var(--white); }
-.nav-cta { background: var(--white); color: var(--black); border: none; padding: 0.65rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; cursor: none; transition: all 0.2s; border-radius: 2px; }
-.nav-cta:hover { background: var(--cream); transform: translateY(-1px); }
-.hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 3rem 5rem; position: relative; overflow: hidden; }
-.hero-number { position: absolute; top: 50%; right: -2rem; transform: translateY(-50%) rotate(90deg); font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 4px; color: var(--grey); text-transform: uppercase; white-space: nowrap; }
-.live-indicator { display: inline-flex; align-items: center; gap: 0.6rem; margin-bottom: 3rem; opacity: 0; animation: fadeUp 0.8s 0.2s ease forwards; }
-.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gaming); animation: pulse-dot 2s ease-in-out infinite; }
-@keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } }
-.live-text { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); }
-.live-count { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 3px; color: var(--white); }
-.hero-title { font-family: 'DM Serif Display', serif; font-size: clamp(5rem, 14vw, 13rem); line-height: 0.88; letter-spacing: -4px; margin-bottom: 3rem; opacity: 0; animation: fadeUp 1s 0.4s ease forwards; }
-.hero-title em { font-style: italic; color: var(--grey); }
-.hero-bottom { display: flex; align-items: flex-end; justify-content: space-between; opacity: 0; animation: fadeUp 0.8s 0.7s ease forwards; }
-.hero-desc { max-width: 380px; font-size: 1rem; line-height: 1.7; color: var(--grey); font-weight: 300; }
-.hero-desc strong { color: var(--white); font-weight: 500; }
-.hero-scroll { display: flex; align-items: center; gap: 1rem; font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); }
-.scroll-line { width: 60px; height: 1px; background: var(--grey); position: relative; overflow: hidden; }
-.scroll-line::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: var(--white); animation: scanline 2s ease-in-out infinite; }
-@keyframes scanline { 0% { left: -100%; } 100% { left: 100%; } }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-.section-divider { width: 100%; height: 1px; background: rgba(255,255,255,0.08); }
-.manifesto { padding: 8rem 3rem; display: grid; grid-template-columns: 1fr 2fr; gap: 4rem; align-items: start; max-width: 1400px; margin: 0 auto; }
-.manifesto-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); padding-top: 0.5rem; }
-.manifesto-text { font-family: 'DM Serif Display', serif; font-size: clamp(1.8rem, 3.5vw, 3rem); line-height: 1.3; letter-spacing: -0.5px; color: var(--white); }
-.manifesto-text em { font-style: italic; color: var(--grey); }
-.universes-header { padding: 0 3rem 4rem; max-width: 1400px; margin: 0 auto; display: flex; align-items: baseline; justify-content: space-between; }
-.universes-title { font-family: 'DM Serif Display', serif; font-size: clamp(2.5rem, 5vw, 4rem); letter-spacing: -2px; }
-.universes-count { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 3px; color: var(--grey); text-transform: uppercase; }
-.universes-grid { padding: 0; margin: 0 3rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); }
-.universe-card { background: var(--black); padding: 3rem; cursor: none; position: relative; overflow: hidden; transition: background 0.4s; }
-.universe-card::before { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.4s; }
-.universe-card:hover::before { opacity: 1; }
-.universe-card:hover { background: #0a0a0c; }
-.gaming-card::before { background: radial-gradient(circle at 0% 100%, rgba(0,255,135,0.06) 0%, transparent 60%); }
-.music-card::before { background: radial-gradient(circle at 0% 100%, rgba(255,60,172,0.06) 0%, transparent 60%); }
-.study-card::before { background: radial-gradient(circle at 0% 100%, rgba(255,214,10,0.06) 0%, transparent 60%); }
-.language-card::before { background: radial-gradient(circle at 0% 100%, rgba(0,200,255,0.06) 0%, transparent 60%); }
-.fitness-card::before { background: radial-gradient(circle at 0% 100%, rgba(255,107,53,0.06) 0%, transparent 60%); }
-.creative-card::before { background: radial-gradient(circle at 0% 100%, rgba(181,123,238,0.06) 0%, transparent 60%); }
-.card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4rem; }
-.card-index { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 2px; color: var(--grey); }
-.card-live { width: 6px; height: 6px; border-radius: 50%; opacity: 0.6; }
-.gaming-card .card-live { background: var(--gaming); animation: pulse-dot 2s infinite; opacity: 1; }
-.music-card .card-live { background: var(--music); }
-.study-card .card-live { background: var(--study); }
-.language-card .card-live { background: var(--language); }
-.fitness-card .card-live { background: var(--fitness); }
-.creative-card .card-live { background: var(--creative); }
-.card-emoji { font-size: 2.5rem; margin-bottom: 1.5rem; display: block; transition: transform 0.3s; }
-.universe-card:hover .card-emoji { transform: scale(1.1) rotate(-5deg); }
-.card-name { font-family: 'DM Serif Display', serif; font-size: 1.8rem; letter-spacing: -0.5px; margin-bottom: 0.5rem; transition: color 0.3s; }
-.gaming-card:hover .card-name { color: var(--gaming); }
-.music-card:hover .card-name { color: var(--music); }
-.study-card:hover .card-name { color: var(--study); }
-.language-card:hover .card-name { color: var(--language); }
-.fitness-card:hover .card-name { color: var(--fitness); }
-.creative-card:hover .card-name { color: var(--creative); }
-.card-sub { font-size: 0.8rem; color: var(--grey); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2rem; font-weight: 500; }
-.card-desc { font-size: 0.9rem; line-height: 1.7; color: rgba(255,255,255,0.45); margin-bottom: 2.5rem; }
-.card-stats { display: flex; gap: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.06); }
-.card-stat-num { font-family: 'DM Mono', monospace; font-size: 1.1rem; font-weight: 500; color: var(--white); display: block; }
-.card-stat-label { font-size: 0.65rem; color: var(--grey); letter-spacing: 2px; text-transform: uppercase; margin-top: 0.2rem; }
-.card-arrow { position: absolute; bottom: 2.5rem; right: 2.5rem; width: 32px; height: 32px; border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--grey); transition: all 0.3s; }
-.universe-card:hover .card-arrow { border-color: rgba(255,255,255,0.3); color: var(--white); transform: translate(3px, -3px); }
-.how { padding: 8rem 3rem; max-width: 1400px; margin: 0 auto; }
-.how-header { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: end; margin-bottom: 6rem; }
-.how-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); margin-bottom: 1.5rem; }
-.how-title { font-family: 'DM Serif Display', serif; font-size: clamp(2.5rem, 5vw, 4rem); letter-spacing: -2px; line-height: 1; }
-.how-sub { color: var(--grey); font-size: 1rem; line-height: 1.7; font-weight: 300; align-self: end; }
-.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); }
-.step { background: var(--black); padding: 3rem 2.5rem; transition: background 0.3s; }
-.step:hover { background: #0a0a0c; }
-.step-num { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; color: var(--grey); margin-bottom: 3rem; }
-.step-icon { font-size: 2rem; display: block; margin-bottom: 1.5rem; }
-.step-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; letter-spacing: -0.3px; margin-bottom: 0.75rem; }
-.step-desc { font-size: 0.85rem; line-height: 1.7; color: var(--grey); }
-.pricing { padding: 8rem 3rem; max-width: 1400px; margin: 0 auto; }
-.pricing-header { margin-bottom: 5rem; }
-.pricing-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); margin-bottom: 1.5rem; }
-.pricing-title { font-family: 'DM Serif Display', serif; font-size: clamp(2.5rem, 5vw, 4rem); letter-spacing: -2px; }
-.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); }
-.pricing-card { background: var(--black); padding: 3rem; transition: background 0.3s; position: relative; }
-.pricing-card.featured { background: var(--white); color: var(--black); }
-.pricing-card:not(.featured):hover { background: #0a0a0c; }
-.plan-tag { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); margin-bottom: 2rem; }
-.pricing-card.featured .plan-tag { color: rgba(0,0,0,0.4); }
-.plan-price { font-family: 'DM Serif Display', serif; font-size: 4.5rem; letter-spacing: -3px; line-height: 1; margin-bottom: 0.5rem; }
-.plan-period { font-size: 0.78rem; color: var(--grey); margin-bottom: 3rem; font-weight: 300; }
-.pricing-card.featured .plan-period { color: rgba(0,0,0,0.4); }
-.plan-features { list-style: none; margin-bottom: 3rem; }
-.plan-features li { padding: 0.75rem 0; font-size: 0.88rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); }
-.pricing-card.featured .plan-features li { border-bottom-color: rgba(0,0,0,0.08); color: rgba(0,0,0,0.6); }
-.plan-features li.on { color: var(--white); }
-.pricing-card.featured .plan-features li.on { color: var(--black); }
-.plan-features li:last-child { border-bottom: none; }
-.ck { color: #00c878; font-size: 0.7rem; }
-.cx { opacity: 0.25; font-size: 0.7rem; }
-.pricing-card.featured .ck { color: #008850; }
-.plan-btn { width: 100%; padding: 1rem; border-radius: 2px; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: none; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: var(--grey); }
-.plan-btn:hover { color: var(--white); border-color: rgba(255,255,255,0.4); }
-.plan-btn.featured-btn { background: var(--black); border-color: var(--black); color: var(--white); }
-.plan-btn.featured-btn:hover { background: #1a1a1a; }
-.cta-section { padding: 10rem 3rem; text-align: center; position: relative; overflow: hidden; }
-.cta-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 70%); pointer-events: none; }
-.cta-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); margin-bottom: 2rem; }
-.cta-title { font-family: 'DM Serif Display', serif; font-size: clamp(4rem, 10vw, 9rem); letter-spacing: -4px; line-height: 0.9; margin-bottom: 3rem; }
-.cta-title em { font-style: italic; color: var(--grey); }
-.cta-btn { display: inline-flex; align-items: center; gap: 1rem; background: var(--white); color: var(--black); border: none; padding: 1.2rem 3rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: none; transition: all 0.3s; border-radius: 2px; margin-bottom: 1.5rem; }
-.cta-btn:hover { background: var(--cream); transform: translateY(-3px); box-shadow: 0 20px 60px rgba(255,255,255,0.1); }
-.cta-sub { font-size: 0.8rem; color: var(--grey); letter-spacing: 1px; }
-footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; max-width: 1400px; margin: 0 auto; }
-.footer-logo { font-family: 'DM Serif Display', serif; font-size: 1.2rem; letter-spacing: -0.5px; }
-.footer-links { display: flex; gap: 2rem; list-style: none; }
-.footer-links a { color: var(--grey); font-size: 0.75rem; text-decoration: none; letter-spacing: 1px; text-transform: uppercase; transition: color 0.2s; font-weight: 500; }
-.footer-links a:hover { color: var(--white); }
-.footer-copy { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--grey); letter-spacing: 2px; }
-.ticker { padding: 1.5rem 0; background: var(--white); overflow: hidden; white-space: nowrap; }
-.ticker-inner { display: inline-flex; animation: ticker 20s linear infinite; }
-.ticker-item { font-family: 'DM Serif Display', serif; font-size: 1rem; color: var(--black); padding: 0 3rem; letter-spacing: -0.3px; }
-.ticker-item em { font-style: italic; color: rgba(0,0,0,0.35); }
-@keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-.stats-bar { padding: 4rem 3rem; max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); }
-.stat-item { background: var(--black); padding: 2.5rem; transition: background 0.3s; }
-.stat-item:hover { background: #0a0a0c; }
-.stat-big { font-family: 'DM Serif Display', serif; font-size: 3rem; letter-spacing: -2px; line-height: 1; margin-bottom: 0.5rem; color: var(--white); }
-.stat-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grey); }
-
-/* RESPONSIVE */
-@media (max-width: 1024px) {
-  .universes-grid { grid-template-columns: repeat(2, 1fr); }
-  .steps { grid-template-columns: repeat(2, 1fr); }
-  .pricing-grid { grid-template-columns: 1fr; }
-  .stats-bar { grid-template-columns: repeat(2, 1fr); }
-  .manifesto { grid-template-columns: 1fr; gap: 2rem; }
-  .how-header { grid-template-columns: 1fr; gap: 2rem; }
-}
-
-@media (max-width: 768px) {
-  body { cursor: auto; }
-  .cursor, .cursor-follower { display: none; }
-  nav { padding: 1.2rem 1.5rem; }
-  .nav-links { display: none; }
-  .hero { padding: 0 1.5rem 4rem; }
-  .hero-title { font-size: clamp(3.5rem, 15vw, 6rem); letter-spacing: -2px; }
-  .hero-bottom { flex-direction: column; gap: 2rem; align-items: flex-start; }
-  .hero-desc { font-size: 0.9rem; }
-  .manifesto { padding: 4rem 1.5rem; }
-  .manifesto-text { font-size: clamp(1.4rem, 5vw, 2rem); }
-  .universes-header { padding: 3rem 1.5rem 2rem; flex-direction: column; gap: 0.5rem; }
-  .universes-grid { grid-template-columns: 1fr; margin: 0 1.5rem; }
-  .universe-card { padding: 2rem 1.5rem; }
-  .stats-bar { grid-template-columns: repeat(2, 1fr); margin: 0 1.5rem; }
-  .how { padding: 4rem 1.5rem; }
-  .steps { grid-template-columns: 1fr; }
-  .pricing { padding: 4rem 1.5rem; }
-  .pricing-grid { grid-template-columns: 1fr; }
-  .pricing-card { padding: 2rem 1.5rem; }
-  .cta-section { padding: 5rem 1.5rem; }
-  .cta-title { font-size: clamp(3rem, 13vw, 5rem); letter-spacing: -2px; }
-  footer { padding: 2rem 1.5rem; flex-direction: column; gap: 1.5rem; text-align: center; }
-  .footer-links { flex-wrap: wrap; justify-content: center; gap: 1rem; }
-  #jouer { padding: 4rem 1.5rem !important; }
-  .ticker-item { font-size: 0.9rem; padding: 0 2rem; }
-  .stat-big { font-size: 2.2rem; }
-  .hero-number { display: none; }
-}
-</style>
 </head>
 <body>
 
@@ -203,7 +14,7 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
 <div class="cursor-follower" id="cursorFollower"></div>
 
 <nav>
-  <div class="nav-logo">Match</div>
+  <a class="nav-logo" href="/">Match</a>
   <ul class="nav-links">
     <li><a href="#universes">Univers</a></li>
     <li><a href="#how">Comment</a></li>
@@ -252,7 +63,7 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
 
 <div class="section-divider" style="margin: 0 3rem;"></div>
 
-<div class="manifesto">
+<div class="manifesto" id="vision">
   <div class="manifesto-label">Notre vision</div>
   <p class="manifesto-text">Le monde est plein de gens qui partagent ta passion.<br><em>Le problème, c'est de les trouver.</em><br>Match résout ça en trente secondes.</p>
 </div>
@@ -265,7 +76,7 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
 </div>
 
 <div class="universes-grid">
-  <div class="universe-card gaming-card">
+  <a class="universe-card gaming-card" href="ggmatch.html">
     <div class="card-top"><span class="card-index">01 / 06</span><div class="card-live"></div></div>
     <span class="card-emoji">🎮</span>
     <div class="card-name">GGMatch</div>
@@ -276,8 +87,8 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
       <div><span class="card-stat-num">200+</span><div class="card-stat-label">Jeux</div></div>
     </div>
     <div class="card-arrow">→</div>
-  </div>
-  <div class="universe-card music-card">
+  </a>
+  <a class="universe-card music-card" href="beatmatch.html">
     <div class="card-top"><span class="card-index">02 / 06</span><div class="card-live"></div></div>
     <span class="card-emoji">🎵</span>
     <div class="card-name">BeatMatch</div>
@@ -288,20 +99,20 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
       <div><span class="card-stat-num">50+</span><div class="card-stat-label">Genres</div></div>
     </div>
     <div class="card-arrow">→</div>
-  </div>
-  <div class="universe-card study-card">
+  </a>
+  <a class="universe-card study-card" href="studymatch.html">
     <div class="card-top"><span class="card-index">03 / 06</span><div class="card-live"></div></div>
     <span class="card-emoji">📚</span>
     <div class="card-name">StudyMatch</div>
-    <div class="card-sub">Etudes & Révisions</div>
+    <div class="card-sub">Études & Révisions</div>
     <p class="card-desc">Révise avec quelqu'un qui prépare les mêmes examens. Maths, droit, médecine, code — le partenaire qu'il te faut.</p>
     <div class="card-stats">
       <div><span class="card-stat-num">15K</span><div class="card-stat-label">En ligne</div></div>
       <div><span class="card-stat-num">30+</span><div class="card-stat-label">Matières</div></div>
     </div>
     <div class="card-arrow">→</div>
-  </div>
-  <div class="universe-card language-card">
+  </a>
+  <a class="universe-card language-card" href="talkmatch.html">
     <div class="card-top"><span class="card-index">04 / 06</span><div class="card-live"></div></div>
     <span class="card-emoji">🌍</span>
     <div class="card-name">TalkMatch</div>
@@ -312,8 +123,8 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
       <div><span class="card-stat-num">40+</span><div class="card-stat-label">Langues</div></div>
     </div>
     <div class="card-arrow">→</div>
-  </div>
-  <div class="universe-card fitness-card">
+  </a>
+  <a class="universe-card fitness-card" href="gymmatch.html">
     <div class="card-top"><span class="card-index">05 / 06</span><div class="card-live"></div></div>
     <span class="card-emoji">🏋️</span>
     <div class="card-name">GymMatch</div>
@@ -324,8 +135,8 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
       <div><span class="card-stat-num">20+</span><div class="card-stat-label">Sports</div></div>
     </div>
     <div class="card-arrow">→</div>
-  </div>
-  <div class="universe-card creative-card">
+  </a>
+  <a class="universe-card creative-card" href="creatematch.html">
     <div class="card-top"><span class="card-index">06 / 06</span><div class="card-live"></div></div>
     <span class="card-emoji">🎨</span>
     <div class="card-name">CreateMatch</div>
@@ -336,7 +147,7 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
       <div><span class="card-stat-num">15+</span><div class="card-stat-label">Disciplines</div></div>
     </div>
     <div class="card-arrow">→</div>
-  </div>
+  </a>
 </div>
 
 <div class="section-divider" style="margin: 0 3rem;"></div>
@@ -445,7 +256,7 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
 <div class="cta-section">
   <div class="cta-bg"></div>
   <div class="cta-label">Rejoindre la communauté</div>
-  <h2 class="cta-title">Pret<br><em>à trouver</em><br>tes people ?</h2>
+  <h2 class="cta-title">Prêt<br><em>à trouver</em><br>ton groupe ?</h2>
   <br>
   <button class="cta-btn" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Commencer gratuitement →</button>
   <br>
@@ -453,32 +264,17 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
 </div>
 
 <footer>
-  <div class="footer-logo">Match</div>
+  <a class="footer-logo" href="/" style="text-decoration:none;color:inherit;">Match</a>
   <ul class="footer-links">
-    <li><a href="#">A propos</a></li>
-    <li><a href="#">Blog</a></li>
-    <li><a href="#">Support</a></li>
-    <li><a href="#">CGU</a></li>
+    <li><a href="#vision">À propos</a></li>
+    <li><a href="mailto:support@ggmatch.gg">Support</a></li>
+    <li><a href="legal.html">CGU</a></li>
   </ul>
   <div class="footer-copy">© 2025 Match</div>
 </footer>
 
+<script src="app.js"></script>
 <script>
-const cursor = document.getElementById('cursor');
-const follower = document.getElementById('cursorFollower');
-let mouseX = 0, mouseY = 0, followerX = 0, followerY = 0;
-document.addEventListener('mousemove', (e) => {
-  mouseX = e.clientX; mouseY = e.clientY;
-  if (cursor) cursor.style.transform = 'translate(' + (mouseX-6) + 'px, ' + (mouseY-6) + 'px)';
-});
-function animateFollower() {
-  followerX += (mouseX - followerX - 20) * 0.1;
-  followerY += (mouseY - followerY - 20) * 0.1;
-  if (follower) follower.style.transform = 'translate(' + followerX + 'px, ' + followerY + 'px)';
-  requestAnimationFrame(animateFollower);
-}
-animateFollower();
-
 let dots = 0;
 setInterval(() => {
   dots = (dots + 1) % 4;
@@ -560,6 +356,19 @@ function subscribe(priceId) {
   .then(function(r) { return r.json(); })
   .then(function(d) { if (d.url) window.location.href = d.url; });
 }
+
+// Pré-remplit le champ "passion" si on arrive depuis une page univers (?univers=...)
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var univers = params.get('univers');
+  if (univers) {
+    var gameInput = document.getElementById('game');
+    if (gameInput) gameInput.value = univers;
+    var jouer = document.getElementById('jouer');
+    if (jouer) setTimeout(function () { jouer.scrollIntoView({behavior:'smooth'}); }, 300);
+  }
+})();
 </script>
 </body>
 </html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
