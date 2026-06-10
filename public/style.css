@@ -214,4 +214,23 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
   .ticker-item { font-size: 0.9rem; padding: 0 2rem; }
   .stat-big { font-size: 2.2rem; }
   .hero-number { display: none; }
+
+  /* Pages univers — surcharge des marges/paddings inline en desktop */
+  [style*="margin: 0 3rem"] { margin: 0 1.5rem !important; }
+  [style*="padding: 0 3rem 6rem"] { padding: 0 1.5rem 3rem !important; }
+
+  .stats-bar { padding: 1.5rem; }
+  .stat-item { padding: 1.25rem; }
+  .card-stats { gap: 1rem; }
+  .cta-btn { padding: 1.1rem 2rem; font-size: 0.8rem; }
+  .hero-emoji { margin-bottom: 1rem; }
+  .feature-list li { font-size: 0.9rem; padding: 1.2rem 0; gap: 1rem; }
+}
+
+@media (max-width: 480px) {
+  .stats-bar { grid-template-columns: 1fr 1fr; }
+  .stat-big { font-size: 1.8rem; }
+  .stat-label { font-size: 0.6rem; }
+  .card-stats { flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .cta-title { letter-spacing: -1px; }
 }
