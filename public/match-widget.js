@@ -223,14 +223,15 @@
       return;
     }
     el.innerHTML = items.map((ev) => `
-      <div class="event-card">
-        <div class="event-date">${formatDate(ev.date)}</div>
+      <div class="event-card ${ev.type === 'tournoi' ? 'tournoi-card' : ''}">
+        ${ev.type === 'tournoi' ? '<div class="event-badge">🏆 Tournoi</div>' : ''}
+        <div class="event-date">${formatDate(ev.date)}${ev.type === 'tournoi' ? ` · <span class="event-countdown">${countdownText(ev.date)}</span>` : ''}</div>
         <div class="event-title">${escapeHtml(ev.title || '')}</div>
         ${ev.description ? `<div class="event-desc">${escapeHtml(ev.description)}</div>` : ''}
+        ${ev.prize ? `<div class="event-prize-highlight">🏆 À gagner : ${escapeHtml(ev.prize)}</div>` : ''}
         <div class="event-meta">
           ${ev.format ? `<span class="event-tag">${escapeHtml(ev.format)}</span>` : ''}
           ${ev.host ? `<span class="event-tag">${escapeHtml(ev.host)}</span>` : ''}
-          ${ev.prize ? `<span class="event-tag prize">🏆 ${escapeHtml(ev.prize)}</span>` : ''}
         </div>
       </div>
     `).join('');
@@ -242,6 +243,20 @@
     const day = date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
     const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     return `${day} · ${time}`;
+  }
+
+  // Texte de compte à rebours lisible avant un événement (ex: "Dans 2j 5h")
+  function countdownText(d) {
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return '';
+    const diff = date.getTime() - Date.now();
+    if (diff <= 0) return 'En cours';
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (days > 0) return `Dans ${days}j ${hours % 24}h`;
+    if (hours > 0) return `Dans ${hours}h ${minutes % 60}min`;
+    return `Dans ${minutes}min`;
   }
 
   function escapeHtml(str) {

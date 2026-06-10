@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boutique & Avatar | Match</title>
+<meta name="description" content="Personnalise ton avatar et débloque des objets cosmétiques pour chaque univers Match.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-follower" id="cursorFollower"></div>
+
+<nav>
+  <a class="nav-logo" href="/">Match</a>
+  <ul class="nav-links">
+    <li><a href="/#universes">Univers</a></li>
+    <li><a href="boutique.html">Boutique</a></li>
+    <li><a href="/#pricing">Tarifs</a></li>
+  </ul>
+  <a class="nav-cta" href="/#jouer">Rejoindre</a>
+</nav>
+
+<section class="hero hero-shop">
+  <div class="hero-number">Boutique & Avatar — Match</div>
+  <span class="hero-emoji">🧢</span>
+  <h1 class="hero-title">Ton avatar.<br><em class="accent-shop">Ton style.</em></h1>
+  <div class="hero-bottom">
+    <p class="hero-desc">Personnalise ton avatar et débloque des objets cosmétiques en gagnant des pièces. Un style différent pour chaque univers.</p>
+  </div>
+</section>
+
+<div class="shop-layout">
+  <div class="avatar-panel">
+    <div class="avatar-preview" id="avatar-preview"></div>
+
+    <div class="coins-bar">
+      <div class="coins-amount"><span id="coins-count">0</span> <span class="coins-icon">🪙</span></div>
+      <button class="coins-claim" id="claim-btn">Bonus du jour +50</button>
+    </div>
+
+    <div class="editor-section">
+      <div class="editor-label">Couleur de peau</div>
+      <div class="swatch-row" id="skin-swatches"></div>
+    </div>
+
+    <div class="editor-section">
+      <div class="editor-label">Coiffure</div>
+      <div class="option-row" id="hair-style-options"></div>
+    </div>
+
+    <div class="editor-section">
+      <div class="editor-label">Couleur de cheveux</div>
+      <div class="swatch-row" id="hair-color-swatches"></div>
+    </div>
+
+    <div class="editor-section">
+      <div class="editor-label">Yeux</div>
+      <div class="option-row" id="eyes-options"></div>
+    </div>
+
+    <div class="editor-section">
+      <div class="editor-label">Couleur de tenue</div>
+      <div class="swatch-row" id="outfit-swatches"></div>
+    </div>
+
+    <div class="editor-section">
+      <div class="editor-label">Équipé</div>
+      <div class="equipped-row" id="equipped-row"></div>
+    </div>
+  </div>
+
+  <div class="shop-catalog" id="shop-catalog">
+    <div class="shop-loading">Chargement de la boutique…</div>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<footer>
+  <a class="footer-logo" href="/" style="text-decoration:none;color:inherit;">Match</a>
+  <ul class="footer-links">
+    <li><a href="/#vision">À propos</a></li>
+    <li><a href="mailto:support@ggmatch.gg">Support</a></li>
+    <li><a href="legal.html">CGU</a></li>
+  </ul>
+  <div class="footer-copy">© 2025 Match</div>
+</footer>
+
+<script src="avatar.js"></script>
+<script src="app.js"></script>
+<script>
+(function () {
+  const UNIVERSE_LABELS = {
+    GGMatch: { label: 'GGMatch — Gaming', emoji: '🎮' },
+    BeatMatch: { label: 'BeatMatch — Musique', emoji: '🎵' },
+    StudyMatch: { label: 'StudyMatch — Études', emoji: '📚' },
+    TalkMatch: { label: 'TalkMatch — Langues', emoji: '🌍' },
+    GymMatch: { label: 'GymMatch — Sport', emoji: '🏋️' },
+    CreateMatch: { label: 'CreateMatch — Créatif', emoji: '🎨' }
+  };
+
+  function refreshAvatar() {
+    GGAvatar.mountAvatar('avatar-preview', GGAvatar.getConfig(), GGAvatar.getEquipped());
+  }
+
+  function refreshCoins() {
+    document.getElementById('coins-count').textContent = GGAvatar.getCoins();
+  }
+
+  function refreshEquipped() {
+    const eq = GGAvatar.getEquipped();
+    const row = document.getElementById('equipped-row');
+    const parts = [];
+    if (eq.outfit) parts.push(`<span class="equipped-chip">${eq.outfit.icon || '👕'} ${eq.outfit.name}</span>`);
+    if (eq.accessory) parts.push(`<span class="equipped-chip">${eq.accessory.icon || '✨'} ${eq.accessory.name}</span>`);
+    row.innerHTML = parts.length ? parts.join('') : '<span class="equipped-chip equipped-empty">Aucun objet équipé</span>';
+  }
+
+  function buildSwatches(containerId, colors, configKey) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = colors.map(c =>
+      `<button class="swatch" data-value="${c}" style="background:${c}"></button>`
+    ).join('');
+    container.querySelectorAll('.swatch').forEach(btn => {
+      if (btn.dataset.value === GGAvatar.getConfig()[configKey]) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        GGAvatar.saveConfig({ [configKey]: btn.dataset.value });
+        container.querySelectorAll('.swatch').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        refreshAvatar();
+      });
+    });
+  }
+
+  function buildOptions(containerId, options, configKey, labels) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = options.map(o =>
+      `<button class="option-btn" data-value="${o}">${labels[o] || o}</button>`
+    ).join('');
+    container.querySelectorAll('.option-btn').forEach(btn => {
+      if (btn.dataset.value === GGAvatar.getConfig()[configKey]) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        GGAvatar.saveConfig({ [configKey]: btn.dataset.value });
+        container.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        refreshAvatar();
+      });
+    });
+  }
+
+  function setupEditor() {
+    buildSwatches('skin-swatches', GGAvatar.PALETTES.skinTones, 'skinTone');
+    buildSwatches('hair-color-swatches', GGAvatar.PALETTES.hairColors, 'hairColor');
+    buildSwatches('outfit-swatches', GGAvatar.PALETTES.outfitColors, 'outfitColor');
+    buildOptions('hair-style-options', GGAvatar.PALETTES.hairStyles, 'hairStyle', {
+      short: 'Courts', long: 'Longs', spiky: 'Hérissés', buzz: 'Ras', buns: 'Couettes'
+    });
+    buildOptions('eyes-options', GGAvatar.PALETTES.eyesStyles, 'eyes', {
+      normal: 'Normaux', happy: 'Joyeux', sleepy: 'Endormis', star: 'Étoilés'
+    });
+  }
+
+  function itemCardHTML(item) {
+    const owned = GGAvatar.ownsItem(item._id);
+    const eq = GGAvatar.getEquipped();
+    const equipped = (item.type === 'accessory' && eq.accessory && eq.accessory._id === item._id)
+      || (item.type === 'outfit' && eq.outfit && eq.outfit._id === item._id);
+
+    let actionHTML;
+    if (!owned) {
+      actionHTML = `<button class="item-btn item-buy" data-id="${item._id}">Débloquer · ${item.price} 🪙</button>`;
+    } else if (equipped) {
+      actionHTML = `<button class="item-btn item-equipped" data-id="${item._id}">Équipé ✓</button>`;
+    } else {
+      actionHTML = `<button class="item-btn item-equip" data-id="${item._id}">Équiper</button>`;
+    }
+
+    const visual = item.icon
+      ? `<div class="item-visual">${item.icon}</div>`
+      : `<div class="item-visual" style="background:${item.color || '#ddd'}"></div>`;
+
+    return `
+      <div class="shop-item ${owned ? 'owned' : ''}" data-id="${item._id}">
+        ${visual}
+        <div class="item-name">${item.name}</div>
+        <div class="item-desc">${item.description || ''}</div>
+        ${actionHTML}
+      </div>`;
+  }
+
+  function attachItemHandlers(items) {
+    document.querySelectorAll('.item-buy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = items.find(i => i._id === btn.dataset.id);
+        if (!item) return;
+        if (GGAvatar.getCoins() < item.price) {
+          alert('Pas assez de pièces ! Reviens demain pour ton bonus quotidien.');
+          return;
+        }
+        if (GGAvatar.unlockItem(item)) {
+          refreshCoins();
+          renderCatalog(items.allItems || items);
+        }
+      });
+    });
+    document.querySelectorAll('.item-equip, .item-equipped').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = items.find(i => i._id === btn.dataset.id);
+        if (!item) return;
+        GGAvatar.equipItem(item);
+        refreshAvatar();
+        refreshEquipped();
+        renderCatalog(items.allItems || items);
+      });
+    });
+  }
+
+  let allItems = [];
+
+  function renderCatalog(items) {
+    allItems = items;
+    const byUniverse = {};
+    items.forEach(item => {
+      (byUniverse[item.universe] = byUniverse[item.universe] || []).push(item);
+    });
+
+    const container = document.getElementById('shop-catalog');
+    container.innerHTML = Object.keys(UNIVERSE_LABELS).map(universe => {
+      const universeItems = byUniverse[universe] || [];
+      if (!universeItems.length) return '';
+      const info = UNIVERSE_LABELS[universe];
+      return `
+        <div class="shop-universe-block">
+          <div class="shop-universe-header">
+            <span class="shop-universe-emoji">${info.emoji}</span>
+            <h3>${info.label}</h3>
+          </div>
+          <div class="shop-items-grid">
+            ${universeItems.map(itemCardHTML).join('')}
+          </div>
+        </div>`;
+    }).join('');
+
+    attachItemHandlers(items);
+  }
+
+  async function loadShop() {
+    try {
+      const res = await fetch('/api/shop');
+      const items = await res.json();
+      renderCatalog(items);
+    } catch (e) {
+      document.getElementById('shop-catalog').innerHTML = '<div class="shop-loading">Impossible de charger la boutique pour le moment.</div>';
+    }
+  }
+
+  document.getElementById('claim-btn').addEventListener('click', () => {
+    const gained = GGAvatar.claimDailyCoins();
+    if (gained > 0) {
+      refreshCoins();
+    } else {
+      alert('Tu as déjà récupéré ton bonus aujourd\'hui. Reviens demain !');
+    }
+  });
+
+  refreshAvatar();
+  refreshCoins();
+  refreshEquipped();
+  setupEditor();
+  loadShop();
+})();
+</script>
+</body>
+</html>

@@ -18,6 +18,7 @@
   <ul class="nav-links">
     <li><a href="#universes">Univers</a></li>
     <li><a href="#how">Comment</a></li>
+    <li><a href="boutique.html">Boutique</a></li>
     <li><a href="#pricing">Tarifs</a></li>
   </ul>
   <button class="nav-cta" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Rejoindre</button>
@@ -36,6 +37,8 @@
     <div class="hero-scroll"><div class="scroll-line"></div>Découvrir</div>
   </div>
 </section>
+
+<div class="featured-tournament" id="featured-tournament-root" style="display:none;"></div>
 
 <div class="ticker">
   <div class="ticker-inner">
@@ -356,6 +359,70 @@ function subscribe(priceId) {
   .then(function(r) { return r.json(); })
   .then(function(d) { if (d.url) window.location.href = d.url; });
 }
+
+// Bandeau "Tournoi à la une" — prochain tournoi tous univers confondus
+(function () {
+  const UNIVERSE_META = {
+    GGMatch: { emoji: '🎮' },
+    BeatMatch: { emoji: '🎵' },
+    StudyMatch: { emoji: '📚' },
+    TalkMatch: { emoji: '🌍' },
+    GymMatch: { emoji: '🏋️' },
+    CreateMatch: { emoji: '🎨' }
+  };
+
+  function countdownText(d) {
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return '';
+    const diff = date.getTime() - Date.now();
+    if (diff <= 0) return 'En cours';
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (days > 0) return `Dans ${days}j ${hours % 24}h`;
+    if (hours > 0) return `Dans ${hours}h ${minutes % 60}min`;
+    return `Dans ${minutes}min`;
+  }
+
+  function formatDate(d) {
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return '';
+    const day = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `${day} à ${time}`;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  fetch('/api/events?type=tournoi')
+    .then((r) => r.json())
+    .then((events) => {
+      const tournoi = (events || [])[0];
+      if (!tournoi) return;
+      const root = document.getElementById('featured-tournament-root');
+      if (!root) return;
+      const meta = UNIVERSE_META[tournoi.universe] || { emoji: '🏆' };
+      root.innerHTML = `
+        <div class="ft-info">
+          <div class="ft-eyebrow">⭐ Tournoi à la une — ${meta.emoji} ${escapeHtml(tournoi.universe)}</div>
+          <div class="ft-title">${escapeHtml(tournoi.title || '')}</div>
+          <div class="ft-meta">
+            <span><strong>${formatDate(tournoi.date)}</strong></span>
+            ${tournoi.format ? `<span>· ${escapeHtml(tournoi.format)}</span>` : ''}
+            <span class="ft-countdown">${countdownText(tournoi.date)}</span>
+            ${tournoi.prize ? `<span class="ft-prize">🏆 ${escapeHtml(tournoi.prize)}</span>` : ''}
+          </div>
+        </div>
+        <a class="ft-cta" href="${tournoi.link || '#jouer'}">Participer →</a>
+      `;
+      root.style.display = 'flex';
+    })
+    .catch(() => {});
+})();
 
 // Pré-remplit le champ "passion" si on arrive depuis une page univers (?univers=...)
 (function () {

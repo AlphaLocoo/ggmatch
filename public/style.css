@@ -14,6 +14,7 @@
   --language: #00c8ff;
   --fitness: #ff6b35;
   --creative: #b57bee;
+  --shop: #ffd166;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -169,6 +170,7 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
 .accent-language { color: var(--language); }
 .accent-fitness { color: var(--fitness); }
 .accent-creative { color: var(--creative); }
+.accent-shop { color: var(--shop); }
 .dot-gaming { background: var(--gaming) !important; }
 .dot-music { background: var(--music) !important; }
 .dot-study { background: var(--study) !important; }
@@ -233,6 +235,87 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
 .event-tag.prize { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.35); }
 .events-empty { padding: 2rem; font-size: 0.85rem; color: var(--grey); }
 
+/* Mise en avant des tournois */
+.event-card.tournoi-card { position: relative; background: radial-gradient(circle at 100% 0%, rgba(var(--accent-rgb), 0.06) 0%, transparent 70%); }
+.event-badge { display: inline-flex; align-items: center; gap: 0.4rem; font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--black); background: var(--accent); padding: 0.3rem 0.6rem; border-radius: 2px; margin-bottom: 0.75rem; font-weight: 600; }
+.event-countdown { color: var(--accent); font-weight: 600; }
+.event-prize-highlight { font-family: 'DM Mono', monospace; font-size: 0.75rem; letter-spacing: 1px; color: var(--accent); border: 1px solid rgba(var(--accent-rgb), 0.3); background: rgba(var(--accent-rgb), 0.06); padding: 0.5rem 0.75rem; border-radius: 2px; margin-bottom: 0.75rem; display: inline-block; }
+
+/* Bandeau "Tournoi à la une" — page d'accueil */
+.featured-tournament { margin: 0 3rem 0; max-width: 1400px; margin-left: auto; margin-right: auto; padding: 2rem 2.5rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; background: linear-gradient(135deg, rgba(255,214,10,0.08) 0%, rgba(255,255,255,0.02) 60%); display: flex; align-items: center; justify-content: space-between; gap: 2rem; flex-wrap: wrap; }
+.ft-info { display: flex; flex-direction: column; gap: 0.5rem; }
+.ft-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: #ffd60a; }
+.ft-title { font-family: 'DM Serif Display', serif; font-size: clamp(1.4rem, 3vw, 2.2rem); letter-spacing: -0.5px; }
+.ft-meta { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; color: var(--grey); font-size: 0.85rem; }
+.ft-meta strong { color: var(--white); }
+.ft-prize { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 1px; color: #ffd60a; border: 1px solid rgba(255,214,10,0.35); background: rgba(255,214,10,0.08); padding: 0.4rem 0.75rem; border-radius: 2px; }
+.ft-countdown { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; color: #ffd60a; border: 1px solid rgba(255,214,10,0.35); padding: 0.4rem 0.75rem; border-radius: 2px; }
+.ft-cta { background: #ffd60a; color: var(--black); border: none; padding: 0.95rem 2rem; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: none; border-radius: 2px; transition: all 0.2s; white-space: nowrap; text-decoration: none; display: inline-block; }
+.ft-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(255,214,10,0.3); }
+
+/* ============================================
+   Boutique & Avatar
+   ============================================ */
+.hero-shop { min-height: 60vh; padding-bottom: 3rem; }
+
+.shop-layout { max-width: 1400px; margin: 0 auto; padding: 0 3rem 6rem; display: grid; grid-template-columns: 320px 1fr; gap: 2rem; align-items: start; }
+
+.avatar-panel { position: sticky; top: 6rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2rem; background: radial-gradient(circle at 0% 0%, rgba(255,209,102,0.06) 0%, transparent 60%); }
+.avatar-preview { width: 100%; max-width: 220px; margin: 0 auto 1.5rem; aspect-ratio: 5 / 6; }
+.avatar-svg { width: 100%; height: 100%; }
+
+.coins-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 2px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.coins-amount { font-family: 'DM Mono', monospace; font-size: 1.1rem; font-weight: 500; color: var(--shop); display: flex; align-items: center; gap: 0.4rem; }
+.coins-icon { font-size: 1rem; }
+.coins-claim { background: var(--shop); color: var(--black); border: none; padding: 0.6rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; cursor: none; border-radius: 2px; transition: all 0.2s; }
+.coins-claim:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(255,209,102,0.25); }
+
+.editor-section { margin-bottom: 1.5rem; }
+.editor-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--grey); margin-bottom: 0.75rem; }
+.swatch-row { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: none; transition: transform 0.15s, border-color 0.15s; padding: 0; }
+.swatch:hover { transform: scale(1.1); }
+.swatch.active { border-color: var(--white); }
+.option-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.option-btn { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); color: var(--grey); padding: 0.5rem 0.85rem; font-family: 'DM Sans', sans-serif; font-size: 0.75rem; border-radius: 2px; cursor: none; transition: all 0.2s; }
+.option-btn:hover { color: var(--white); border-color: rgba(255,255,255,0.3); }
+.option-btn.active { background: var(--shop); color: var(--black); border-color: var(--shop); font-weight: 600; }
+
+.equipped-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.equipped-chip { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; color: var(--white); border: 1px solid rgba(255,255,255,0.12); padding: 0.4rem 0.7rem; border-radius: 2px; }
+.equipped-chip.equipped-empty { color: var(--grey); }
+
+.shop-loading { padding: 3rem; text-align: center; color: var(--grey); font-family: 'DM Mono', monospace; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; }
+
+.shop-universe-block { margin-bottom: 3rem; }
+.shop-universe-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.shop-universe-emoji { font-size: 1.5rem; }
+.shop-universe-header h3 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; font-weight: 400; letter-spacing: -0.5px; }
+
+.shop-items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); }
+.shop-item { background: var(--black); padding: 1.5rem; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.5rem; transition: background 0.3s; }
+.shop-item:hover { background: #0a0a0c; }
+.shop-item.owned { background: rgba(255,209,102,0.04); }
+.item-visual { width: 56px; height: 56px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; background: rgba(255,255,255,0.05); }
+.item-name { font-family: 'DM Serif Display', serif; font-size: 1rem; }
+.item-desc { font-size: 0.75rem; line-height: 1.5; color: rgba(255,255,255,0.45); flex-grow: 1; }
+.item-btn { width: 100%; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: var(--white); padding: 0.6rem 0.75rem; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; cursor: none; border-radius: 2px; transition: all 0.2s; }
+.item-btn:hover { border-color: rgba(255,255,255,0.4); }
+.item-btn.item-buy { background: var(--shop); color: var(--black); border-color: var(--shop); }
+.item-btn.item-buy:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(255,209,102,0.25); }
+.item-btn.item-equipped { background: rgba(255,209,102,0.15); border-color: var(--shop); color: var(--shop); cursor: default; }
+
+@media (max-width: 1024px) {
+  .shop-layout { grid-template-columns: 1fr; }
+  .avatar-panel { position: static; max-width: 420px; margin: 0 auto 2rem; }
+}
+
+@media (max-width: 768px) {
+  .shop-layout { padding: 0 1.5rem 4rem; }
+  .hero-shop { min-height: 40vh; }
+  .shop-items-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+
 /* RESPONSIVE */
 @media (max-width: 1024px) {
   .universes-grid { grid-template-columns: repeat(2, 1fr); }
@@ -290,6 +373,7 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
   .mw-chat-input { flex-direction: column; }
   .events-section { padding: 4rem 1.5rem; }
   .events-grid { grid-template-columns: 1fr; }
+  .featured-tournament { margin: 0 1.5rem; padding: 1.5rem; flex-direction: column; align-items: flex-start; }
 }
 
 @media (max-width: 480px) {

@@ -11,6 +11,7 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('MongoDB connecté');
     seedEvents();
+    seedShopItems();
   })
   .catch((err) => console.error('Erreur connexion MongoDB:', err.message));
 
@@ -65,6 +66,51 @@ async function seedEvents() {
   }
 }
 
+// Articles cosmétiques de la boutique (avatar) — modifiables ensuite via /admin.html
+async function seedShopItems() {
+  try {
+    const count = await ShopItem.countDocuments();
+    if (count > 0) return;
+
+    const seed = [
+      // GGMatch
+      { universe: 'GGMatch', type: 'accessory', slot: 'headset', name: 'Casque gamer', description: 'Casque-micro RGB pour les sessions intenses.', price: 80, icon: '🎧' },
+      { universe: 'GGMatch', type: 'accessory', slot: 'controller', name: 'Manette néon', description: 'Une manette qui brille dans le noir.', price: 100, icon: '🎮' },
+      { universe: 'GGMatch', type: 'outfit', slot: 'jersey', name: 'Maillot Pro Gamer', description: 'Le style des équipes esport.', price: 120, color: '#7c3aed' },
+
+      // BeatMatch
+      { universe: 'BeatMatch', type: 'accessory', slot: 'headphones', name: 'Casque audio studio', description: 'Pour mixer comme un pro.', price: 80, icon: '🎧' },
+      { universe: 'BeatMatch', type: 'accessory', slot: 'guitar', name: 'Guitare', description: 'Toujours prête pour un freestyle.', price: 110, icon: '🎸' },
+      { universe: 'BeatMatch', type: 'outfit', slot: 'jacket', name: 'Veste Rockstar', description: 'Look scène, prêt pour le live.', price: 120, color: '#ec4899' },
+
+      // StudyMatch
+      { universe: 'StudyMatch', type: 'accessory', slot: 'glasses', name: 'Lunettes intello', description: 'Pour mieux lire les annales.', price: 60, icon: '🤓' },
+      { universe: 'StudyMatch', type: 'accessory', slot: 'book', name: 'Pile de livres', description: 'Révisions en cours.', price: 90, icon: '📚' },
+      { universe: 'StudyMatch', type: 'outfit', slot: 'sweater', name: 'Pull campus', description: 'Le confort avant tout.', price: 110, color: '#2563eb' },
+
+      // TalkMatch
+      { universe: 'TalkMatch', type: 'accessory', slot: 'globe', name: 'Petit globe', description: 'Le monde entier à portée de main.', price: 90, icon: '🌍' },
+      { universe: 'TalkMatch', type: 'accessory', slot: 'flags', name: 'Drapeaux du monde', description: 'Affiche les langues que tu parles.', price: 100, icon: '🏳️' },
+      { universe: 'TalkMatch', type: 'outfit', slot: 'scarf', name: 'Écharpe voyageuse', description: 'Souvenir de tes échanges.', price: 110, color: '#f59e0b' },
+
+      // GymMatch
+      { universe: 'GymMatch', type: 'accessory', slot: 'dumbbell', name: 'Haltère', description: 'Toujours motivé.', price: 90, icon: '🏋️' },
+      { universe: 'GymMatch', type: 'accessory', slot: 'headband', name: 'Bandeau de sport', description: 'Style et transpiration maîtrisée.', price: 60, icon: '🎽' },
+      { universe: 'GymMatch', type: 'outfit', slot: 'tracksuit', name: 'Survêtement', description: 'Prêt pour la séance.', price: 120, color: '#16a34a' },
+
+      // CreateMatch
+      { universe: 'CreateMatch', type: 'accessory', slot: 'palette', name: 'Palette de peinture', description: 'L\'inspiration à portée de main.', price: 90, icon: '🎨' },
+      { universe: 'CreateMatch', type: 'accessory', slot: 'beret', name: 'Béret d\'artiste', description: 'Un classique indémodable.', price: 70, icon: '🧢' },
+      { universe: 'CreateMatch', type: 'outfit', slot: 'apron', name: 'Tablier créatif', description: 'Pour ne pas tacher tes habits.', price: 110, color: '#f97316' },
+    ];
+
+    await ShopItem.insertMany(seed);
+    console.log(`${seed.length} articles boutique initialisés.`);
+  } catch (e) {
+    console.error('Erreur seed boutique:', e.message);
+  }
+}
+
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
@@ -87,6 +133,21 @@ const EventSchema = new mongoose.Schema({
   status: { type: String, enum: ['upcoming', 'live', 'ended'], default: 'upcoming' }
 }, { timestamps: true });
 const Event = mongoose.model('Event', EventSchema);
+
+// Articles cosmétiques de la boutique (avatar)
+const ShopItemSchema = new mongoose.Schema({
+  universe: { type: String, required: true, index: true },
+  type: { type: String, enum: ['accessory', 'hairstyle', 'outfit'], required: true },
+  slot: String,
+  name: String,
+  description: String,
+  price: Number,
+  icon: String,
+  color: String,
+  value: String
+}, { timestamps: true });
+const ShopItem = mongoose.model('ShopItem', ShopItemSchema);
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -145,6 +206,48 @@ app.put('/api/events/:id', requireAdmin, async (req, res) => {
 app.delete('/api/events/:id', requireAdmin, async (req, res) => {
   try {
     await Event.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Boutique — lecture publique (catalogue d'articles cosmétiques pour l'avatar)
+app.get('/api/shop', async (req, res) => {
+  try {
+    const { universe } = req.query;
+    const filter = {};
+    if (universe) filter.universe = universe;
+    const items = await ShopItem.find(filter).sort({ universe: 1, type: 1 });
+    res.json(items);
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Boutique — gestion (admin)
+app.post('/api/shop', requireAdmin, async (req, res) => {
+  try {
+    const item = new ShopItem(req.body);
+    await item.save();
+    res.json(item);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.put('/api/shop/:id', requireAdmin, async (req, res) => {
+  try {
+    const item = await ShopItem.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(item);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.delete('/api/shop/:id', requireAdmin, async (req, res) => {
+  try {
+    await ShopItem.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: e.message });
