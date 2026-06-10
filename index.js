@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -5,7 +6,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const mongoose = require('mongoose');
-mongoose.connect(process.env.MONGODB_URI);
+
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('MongoDB connecté'))
+  .catch((err) => console.error('Erreur connexion MongoDB:', err.message));
 
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
@@ -23,9 +27,7 @@ const io = new Server(server, {
 app.use(express.json());
 app.use(express.static('public'));
 
-const users = {};
 const queue = [];
-const SECRET = 'ggmatch_secret';
 
 // Inscription
 app.post('/register', async (req, res) => {
@@ -57,17 +59,6 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Connexion
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  const user = users[username];
-  if (!user) return res.status(400).json({ error: 'Utilisateur introuvable' });
-  const ok = await bcrypt.compare(password, user.password);
-  if (!ok) return res.status(400).json({ error: 'Mauvais mot de passe' });
-  const token = jwt.sign({ username }, SECRET);
-  res.json({ token, username });
-});
-
 // Matchmaking
 io.on('connection', (socket) => {
   console.log('Joueur connecté:', socket.id);
@@ -80,7 +71,7 @@ io.on('connection', (socket) => {
     if (queue.length >= 2) {
       const p1 = queue.shift();
       const p2 = queue.shift();
-      const room = 'room_${p1.id}_${p2.id}';
+      const room = `room_${p1.id}_${p2.id}`;
       p1.join(room);
       p2.join(room);
       io.to(room).emit('match_found', {
@@ -103,17 +94,26 @@ io.on('connection', (socket) => {
     if (i > -1) queue.splice(i, 1);
   });
 });
+
 app.post('/create-checkout', async (req, res) => {
   const { priceId } = req.body;
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: 'https://ggmatch-production.up.railway.app/?success=true',
-    cancel_url: 'https://ggmatch-production.up.railway.app/?cancelled=true',
-  });
-  res.json({ url: session.url });
+  if (!priceId) return res.status(400).json({ error: 'priceId manquant' });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: 'https://ggmatch-production.up.railway.app/?success=true',
+      cancel_url: 'https://ggmatch-production.up.railway.app/?cancelled=true',
+    });
+    res.json({ url: session.url });
+  } catch (e) {
+    console.error('Erreur Stripe:', e.message);
+    res.status(500).json({ error: 'Erreur lors de la création du paiement' });
+  }
 });
-server.listen(3000, () => {
-  console.log('GGMatch tourne sur http://localhost:3000');
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`GGMatch tourne sur http://localhost:${PORT}`);
 });
