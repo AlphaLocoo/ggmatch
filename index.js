@@ -12,6 +12,7 @@ mongoose.connect(process.env.MONGODB_URI)
     console.log('MongoDB connecté');
     seedEvents();
     seedShopItems();
+    seedBattlePass();
   })
   .catch((err) => console.error('Erreur connexion MongoDB:', err.message));
 
@@ -67,47 +68,143 @@ async function seedEvents() {
 }
 
 // Articles cosmétiques de la boutique (avatar) — modifiables ensuite via /admin.html
+// Le seed est appliqué via upsert (clé universe+slot) : on peut ajouter de nouveaux
+// articles à tout moment sans dupliquer ni toucher aux objets déjà possédés.
 async function seedShopItems() {
   try {
-    const count = await ShopItem.countDocuments();
-    if (count > 0) return;
-
     const seed = [
       // GGMatch
       { universe: 'GGMatch', type: 'accessory', slot: 'headset', name: 'Casque gamer', description: 'Casque-micro RGB pour les sessions intenses.', price: 80, icon: '🎧' },
       { universe: 'GGMatch', type: 'accessory', slot: 'controller', name: 'Manette néon', description: 'Une manette qui brille dans le noir.', price: 100, icon: '🎮' },
+      { universe: 'GGMatch', type: 'accessory', slot: 'trophy', name: 'Trophée MVP', description: 'La récompense des champions.', price: 130, icon: '🏆' },
+      { universe: 'GGMatch', type: 'accessory', slot: 'mic', name: 'Micro streaming', description: 'Pour commenter tes meilleures actions.', price: 90, icon: '🎙️' },
+      { universe: 'GGMatch', type: 'accessory', slot: 'crown', name: 'Couronne Champion', description: 'Réservée aux meilleurs joueurs.', price: 150, icon: '👑' },
+      { universe: 'GGMatch', type: 'hairstyle', slot: 'hair-spiky-neon', name: 'Crête gamer', description: 'Coupe hérissée vert néon.', price: 110, icon: '⚡', value: 'spiky', color: '#00ff87' },
+      { universe: 'GGMatch', type: 'hairstyle', slot: 'hair-long-neon', name: 'Mèches néon', description: 'Cheveux longs bleu cyan électrique.', price: 110, icon: '💠', value: 'long', color: '#00c8ff' },
       { universe: 'GGMatch', type: 'outfit', slot: 'jersey', name: 'Maillot Pro Gamer', description: 'Le style des équipes esport.', price: 120, color: '#7c3aed' },
+      { universe: 'GGMatch', type: 'outfit', slot: 'hoodie', name: 'Hoodie esport', description: 'Confort et discrétion pour les longues sessions.', price: 100, color: '#1f2937' },
+      { universe: 'GGMatch', type: 'outfit', slot: 'streamer-jacket', name: 'Veste streamer', description: 'Le look des créateurs de contenu.', price: 130, color: '#dc2626' },
 
       // BeatMatch
       { universe: 'BeatMatch', type: 'accessory', slot: 'headphones', name: 'Casque audio studio', description: 'Pour mixer comme un pro.', price: 80, icon: '🎧' },
       { universe: 'BeatMatch', type: 'accessory', slot: 'guitar', name: 'Guitare', description: 'Toujours prête pour un freestyle.', price: 110, icon: '🎸' },
+      { universe: 'BeatMatch', type: 'accessory', slot: 'vinyl', name: 'Vinyle collector', description: 'Une pièce de collection qui en jette.', price: 90, icon: '💿' },
+      { universe: 'BeatMatch', type: 'accessory', slot: 'mic-vintage', name: 'Micro vintage', description: 'Pour des sessions au charme rétro.', price: 100, icon: '🎤' },
+      { universe: 'BeatMatch', type: 'accessory', slot: 'dj-cap', name: 'Casquette DJ', description: 'Le style derrière les platines.', price: 70, icon: '🧢' },
+      { universe: 'BeatMatch', type: 'hairstyle', slot: 'hair-spiky-pink', name: 'Crête punk', description: 'Coupe hérissée rose flashy.', price: 110, icon: '🎀', value: 'spiky', color: '#ff3cac' },
+      { universe: 'BeatMatch', type: 'hairstyle', slot: 'hair-buns-pop', name: 'Couettes pop', description: 'Deux couettes couleur magenta.', price: 100, icon: '🎵', value: 'buns', color: '#a83279' },
       { universe: 'BeatMatch', type: 'outfit', slot: 'jacket', name: 'Veste Rockstar', description: 'Look scène, prêt pour le live.', price: 120, color: '#ec4899' },
+      { universe: 'BeatMatch', type: 'outfit', slot: 'stage-suit', name: 'Combinaison scène dorée', description: 'Pour briller sous les projecteurs.', price: 140, color: '#f59e0b' },
+      { universe: 'BeatMatch', type: 'outfit', slot: 'band-tee', name: 'T-shirt groupe', description: 'Le merch de ton groupe préféré.', price: 90, color: '#1f2937' },
 
       // StudyMatch
       { universe: 'StudyMatch', type: 'accessory', slot: 'glasses', name: 'Lunettes intello', description: 'Pour mieux lire les annales.', price: 60, icon: '🤓' },
       { universe: 'StudyMatch', type: 'accessory', slot: 'book', name: 'Pile de livres', description: 'Révisions en cours.', price: 90, icon: '📚' },
+      { universe: 'StudyMatch', type: 'accessory', slot: 'grad-cap', name: 'Toque de diplômé', description: 'Pour fêter la réussite.', price: 100, icon: '🎓' },
+      { universe: 'StudyMatch', type: 'accessory', slot: 'calculator', name: 'Calculatrice', description: 'Indispensable pour les exams.', price: 70, icon: '🧮' },
+      { universe: 'StudyMatch', type: 'accessory', slot: 'coffee', name: 'Café révision', description: 'Le carburant des longues sessions.', price: 60, icon: '☕' },
+      { universe: 'StudyMatch', type: 'hairstyle', slot: 'hair-buns-studious', name: 'Chignon studieux', description: 'Pratique pour se concentrer.', price: 100, icon: '📌', value: 'buns', color: '#7a4a26' },
+      { universe: 'StudyMatch', type: 'hairstyle', slot: 'hair-short-sage', name: 'Carré sage', description: 'Coupe courte et nette.', price: 80, icon: '✏️', value: 'short', color: '#1c1c1c' },
       { universe: 'StudyMatch', type: 'outfit', slot: 'sweater', name: 'Pull campus', description: 'Le confort avant tout.', price: 110, color: '#2563eb' },
+      { universe: 'StudyMatch', type: 'outfit', slot: 'blazer', name: 'Blazer académique', description: 'Pour les grandes occasions.', price: 140, color: '#1e3a8a' },
+      { universe: 'StudyMatch', type: 'outfit', slot: 'varsity', name: 'Veste universitaire', description: 'L\'esprit campus US.', price: 120, color: '#ffd60a' },
 
       // TalkMatch
       { universe: 'TalkMatch', type: 'accessory', slot: 'globe', name: 'Petit globe', description: 'Le monde entier à portée de main.', price: 90, icon: '🌍' },
       { universe: 'TalkMatch', type: 'accessory', slot: 'flags', name: 'Drapeaux du monde', description: 'Affiche les langues que tu parles.', price: 100, icon: '🏳️' },
+      { universe: 'TalkMatch', type: 'accessory', slot: 'passport', name: 'Passeport tamponné', description: 'Les preuves de tes voyages.', price: 80, icon: '📔' },
+      { universe: 'TalkMatch', type: 'accessory', slot: 'translate-headset', name: 'Casque traduction', description: 'Pour ne perdre aucun mot.', price: 100, icon: '🎧' },
+      { universe: 'TalkMatch', type: 'accessory', slot: 'camera', name: 'Appareil photo voyage', description: 'Immortalise tes échanges.', price: 90, icon: '📷' },
+      { universe: 'TalkMatch', type: 'hairstyle', slot: 'hair-long-traveler', name: 'Tresses voyageuses', description: 'Cheveux longs tressés.', price: 100, icon: '🧵', value: 'long', color: '#c98a3c' },
+      { universe: 'TalkMatch', type: 'hairstyle', slot: 'hair-buzz-explorer', name: 'Bandana globe-trotter', description: 'Coupe courte façon explorateur.', price: 80, icon: '🧭', value: 'buzz', color: '#3b2417' },
       { universe: 'TalkMatch', type: 'outfit', slot: 'scarf', name: 'Écharpe voyageuse', description: 'Souvenir de tes échanges.', price: 110, color: '#f59e0b' },
+      { universe: 'TalkMatch', type: 'outfit', slot: 'explorer-jacket', name: 'Veste explorateur', description: 'Prête pour l\'aventure.', price: 130, color: '#16a34a' },
+      { universe: 'TalkMatch', type: 'outfit', slot: 'poncho', name: 'Poncho coloré', description: 'Un style venu d\'ailleurs.', price: 110, color: '#0891b2' },
 
       // GymMatch
       { universe: 'GymMatch', type: 'accessory', slot: 'dumbbell', name: 'Haltère', description: 'Toujours motivé.', price: 90, icon: '🏋️' },
       { universe: 'GymMatch', type: 'accessory', slot: 'headband', name: 'Bandeau de sport', description: 'Style et transpiration maîtrisée.', price: 60, icon: '🎽' },
+      { universe: 'GymMatch', type: 'accessory', slot: 'medal', name: 'Médaille d\'or', description: 'La récompense de l\'effort.', price: 130, icon: '🥇' },
+      { universe: 'GymMatch', type: 'accessory', slot: 'bottle', name: 'Gourde sport', description: 'Reste hydraté pendant l\'effort.', price: 60, icon: '🥤' },
+      { universe: 'GymMatch', type: 'accessory', slot: 'smartwatch', name: 'Montre connectée', description: 'Suis tes performances.', price: 100, icon: '⌚' },
+      { universe: 'GymMatch', type: 'hairstyle', slot: 'hair-long-sport', name: 'Queue de cheval sportive', description: 'Pratique pour bouger.', price: 90, icon: '🎗️', value: 'long', color: '#1c1c1c' },
+      { universe: 'GymMatch', type: 'hairstyle', slot: 'hair-buzz-motiv', name: 'Crâne rasé motivé', description: 'Coupe courte et efficace.', price: 70, icon: '🔥', value: 'buzz', color: '#1c1c1c' },
       { universe: 'GymMatch', type: 'outfit', slot: 'tracksuit', name: 'Survêtement', description: 'Prêt pour la séance.', price: 120, color: '#16a34a' },
+      { universe: 'GymMatch', type: 'outfit', slot: 'tank', name: 'Débardeur performance', description: 'Léger et respirant.', price: 100, color: '#dc2626' },
+      { universe: 'GymMatch', type: 'outfit', slot: 'joggers', name: 'Jogging premium', description: 'Confort et style en salle.', price: 130, color: '#1f2937' },
 
       // CreateMatch
       { universe: 'CreateMatch', type: 'accessory', slot: 'palette', name: 'Palette de peinture', description: 'L\'inspiration à portée de main.', price: 90, icon: '🎨' },
       { universe: 'CreateMatch', type: 'accessory', slot: 'beret', name: 'Béret d\'artiste', description: 'Un classique indémodable.', price: 70, icon: '🧢' },
+      { universe: 'CreateMatch', type: 'accessory', slot: 'brush', name: 'Pinceau magique', description: 'Pour les coups de génie.', price: 80, icon: '🖌️' },
+      { universe: 'CreateMatch', type: 'accessory', slot: 'camera-art', name: 'Appareil photo', description: 'Capture tes meilleures idées.', price: 90, icon: '📸' },
+      { universe: 'CreateMatch', type: 'accessory', slot: 'glasses-creative', name: 'Lunettes créatives', description: 'Vois le monde autrement.', price: 70, icon: '🕶️' },
+      { universe: 'CreateMatch', type: 'hairstyle', slot: 'hair-spiky-rainbow', name: 'Mèches arc-en-ciel', description: 'Coupe hérissée violette éclatante.', price: 120, icon: '🌈', value: 'spiky', color: '#b57bee' },
+      { universe: 'CreateMatch', type: 'hairstyle', slot: 'hair-long-artist', name: 'Crinière artiste', description: 'Cheveux longs roses vifs.', price: 110, icon: '✨', value: 'long', color: '#ec4899' },
       { universe: 'CreateMatch', type: 'outfit', slot: 'apron', name: 'Tablier créatif', description: 'Pour ne pas tacher tes habits.', price: 110, color: '#f97316' },
+      { universe: 'CreateMatch', type: 'outfit', slot: 'overalls', name: 'Salopette créative', description: 'Look atelier décontracté.', price: 130, color: '#f97316' },
+      { universe: 'CreateMatch', type: 'outfit', slot: 'print-jacket', name: 'Veste imprimée', description: 'Un motif unique, signé toi.', price: 120, color: '#7c3aed' },
     ];
 
-    await ShopItem.insertMany(seed);
-    console.log(`${seed.length} articles boutique initialisés.`);
+    let inserted = 0;
+    for (const item of seed) {
+      const result = await ShopItem.updateOne(
+        { universe: item.universe, slot: item.slot },
+        { $setOnInsert: item },
+        { upsert: true }
+      );
+      if (result.upsertedCount > 0) inserted++;
+    }
+    if (inserted > 0) console.log(`${inserted} nouveaux articles boutique ajoutés.`);
   } catch (e) {
     console.error('Erreur seed boutique:', e.message);
+  }
+}
+
+// Génère les paliers du passe de combat pour un univers donné.
+// 10 paliers, XP cumulée requise = palier * 150. Récompenses gratuites et premium en pièces,
+// avec une icône à thème pour chaque palier (purement visuel pour l'instant).
+function buildBattlePassTiers(universe, icons) {
+  const tiers = [];
+  for (let tier = 1; tier <= 10; tier++) {
+    const icon = icons[(tier - 1) % icons.length];
+    const freeCoins = 20 + tier * 10;
+    const premiumCoins = freeCoins * 2 + 50;
+    tiers.push({
+      universe,
+      tier,
+      xpRequired: tier * 150,
+      freeReward: { label: `${freeCoins} pièces`, icon, coins: freeCoins },
+      premiumReward: { label: `${premiumCoins} pièces + ${icon}`, icon, coins: premiumCoins }
+    });
+  }
+  return tiers;
+}
+
+// Passe de combat — paliers par univers (récompenses gratuites + premium)
+async function seedBattlePass() {
+  try {
+    const seed = [
+      ...buildBattlePassTiers('GGMatch', ['🎮', '🏆', '🎧', '⚡', '👑', '🔥', '💎', '🚀', '🥇', '🌟']),
+      ...buildBattlePassTiers('BeatMatch', ['🎵', '🎤', '🎸', '💿', '🎧', '🔥', '💎', '🚀', '🥇', '🌟']),
+      ...buildBattlePassTiers('StudyMatch', ['📚', '🎓', '✏️', '☕', '🧮', '🔥', '💎', '🚀', '🥇', '🌟']),
+      ...buildBattlePassTiers('TalkMatch', ['🌍', '🏳️', '📔', '🧭', '📷', '🔥', '💎', '🚀', '🥇', '🌟']),
+      ...buildBattlePassTiers('GymMatch', ['🏋️', '🥇', '⌚', '🎽', '💪', '🔥', '💎', '🚀', '🏅', '🌟']),
+      ...buildBattlePassTiers('CreateMatch', ['🎨', '🖌️', '📸', '🧢', '🕶️', '🔥', '💎', '🚀', '🥇', '🌟']),
+    ];
+
+    let inserted = 0;
+    for (const t of seed) {
+      const result = await BattlePassReward.updateOne(
+        { universe: t.universe, tier: t.tier },
+        { $setOnInsert: t },
+        { upsert: true }
+      );
+      if (result.upsertedCount > 0) inserted++;
+    }
+    if (inserted > 0) console.log(`${inserted} paliers de passe de combat ajoutés.`);
+  } catch (e) {
+    console.error('Erreur seed passe de combat:', e.message);
   }
 }
 
@@ -147,6 +244,25 @@ const ShopItemSchema = new mongoose.Schema({
   value: String
 }, { timestamps: true });
 const ShopItem = mongoose.model('ShopItem', ShopItemSchema);
+
+// Passe de combat — paliers par univers (récompenses gratuites + premium)
+const BattlePassRewardSchema = new mongoose.Schema({
+  universe: { type: String, required: true, index: true },
+  tier: { type: Number, required: true },
+  xpRequired: { type: Number, required: true },
+  freeReward: {
+    label: String,
+    icon: String,
+    coins: Number
+  },
+  premiumReward: {
+    label: String,
+    icon: String,
+    coins: Number
+  }
+}, { timestamps: true });
+BattlePassRewardSchema.index({ universe: 1, tier: 1 }, { unique: true });
+const BattlePassReward = mongoose.model('BattlePassReward', BattlePassRewardSchema);
 
 const app = express();
 const server = http.createServer(app);
@@ -248,6 +364,48 @@ app.put('/api/shop/:id', requireAdmin, async (req, res) => {
 app.delete('/api/shop/:id', requireAdmin, async (req, res) => {
   try {
     await ShopItem.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Passe de combat — lecture publique (paliers par univers)
+app.get('/api/battlepass', async (req, res) => {
+  try {
+    const { universe } = req.query;
+    const filter = {};
+    if (universe) filter.universe = universe;
+    const tiers = await BattlePassReward.find(filter).sort({ universe: 1, tier: 1 });
+    res.json(tiers);
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Passe de combat — gestion (admin)
+app.post('/api/battlepass', requireAdmin, async (req, res) => {
+  try {
+    const tier = new BattlePassReward(req.body);
+    await tier.save();
+    res.json(tier);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.put('/api/battlepass/:id', requireAdmin, async (req, res) => {
+  try {
+    const tier = await BattlePassReward.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(tier);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.delete('/api/battlepass/:id', requireAdmin, async (req, res) => {
+  try {
+    await BattlePassReward.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: e.message });
@@ -373,6 +531,33 @@ app.post('/create-checkout', async (req, res) => {
     res.json({ url: session.url });
   } catch (e) {
     console.error('Erreur Stripe:', e.message);
+    res.status(500).json({ error: 'Erreur lors de la création du paiement' });
+  }
+});
+
+// Achat du palier Premium du passe de combat (paiement unique, par univers)
+const BATTLEPASS_PRICE_EUR = 4.99;
+app.post('/create-battlepass-checkout', async (req, res) => {
+  const { universe } = req.body;
+  if (!universe) return res.status(400).json({ error: 'universe manquant' });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          unit_amount: Math.round(BATTLEPASS_PRICE_EUR * 100),
+          product_data: { name: `Passe de combat Premium — ${universe}` }
+        },
+        quantity: 1
+      }],
+      success_url: `https://ggmatch-production.up.railway.app/boutique.html?bp_premium=${encodeURIComponent(universe)}`,
+      cancel_url: 'https://ggmatch-production.up.railway.app/boutique.html?cancelled=true',
+    });
+    res.json({ url: session.url });
+  } catch (e) {
+    console.error('Erreur Stripe (passe de combat):', e.message);
     res.status(500).json({ error: 'Erreur lors de la création du paiement' });
   }
 });

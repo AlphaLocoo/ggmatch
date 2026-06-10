@@ -79,6 +79,31 @@
 
 <div class="section-divider"></div>
 
+<div class="battlepass-section">
+  <div class="bp-header">
+    <div>
+      <h2 class="bp-title">Passe de <em class="accent-shop">combat</em></h2>
+      <div class="bp-subtitle">+25 XP par match joué · +15 XP/jour pour tous les univers</div>
+    </div>
+    <button class="coins-claim" id="bp-daily-btn">Bonus XP du jour</button>
+  </div>
+
+  <div class="bp-tabs" id="bp-tabs"></div>
+
+  <div class="bp-progress-wrap">
+    <div class="bp-progress-row">
+      <div class="bp-progress-bar"><div class="bp-progress-fill" id="bp-progress-fill"></div></div>
+      <div class="bp-progress-label" id="bp-progress-label"></div>
+    </div>
+  </div>
+
+  <div class="bp-premium-cta" id="bp-premium-cta"></div>
+
+  <div class="bp-track" id="bp-track"></div>
+</div>
+
+<div class="section-divider"></div>
+
 <footer>
   <a class="footer-logo" href="/" style="text-decoration:none;color:inherit;">Match</a>
   <ul class="footer-links">
@@ -115,6 +140,7 @@
     const row = document.getElementById('equipped-row');
     const parts = [];
     if (eq.outfit) parts.push(`<span class="equipped-chip">${eq.outfit.icon || '👕'} ${eq.outfit.name}</span>`);
+    if (eq.hairstyle) parts.push(`<span class="equipped-chip">${eq.hairstyle.icon || '💇'} ${eq.hairstyle.name}</span>`);
     if (eq.accessory) parts.push(`<span class="equipped-chip">${eq.accessory.icon || '✨'} ${eq.accessory.name}</span>`);
     row.innerHTML = parts.length ? parts.join('') : '<span class="equipped-chip equipped-empty">Aucun objet équipé</span>';
   }
@@ -167,7 +193,8 @@
     const owned = GGAvatar.ownsItem(item._id);
     const eq = GGAvatar.getEquipped();
     const equipped = (item.type === 'accessory' && eq.accessory && eq.accessory._id === item._id)
-      || (item.type === 'outfit' && eq.outfit && eq.outfit._id === item._id);
+      || (item.type === 'outfit' && eq.outfit && eq.outfit._id === item._id)
+      || (item.type === 'hairstyle' && eq.hairstyle && eq.hairstyle._id === item._id);
 
     let actionHTML;
     if (!owned) {
@@ -266,11 +293,147 @@
     }
   });
 
+  // --- Passe de combat ---
+
+  let bpTiers = []; // tous les paliers, tous univers
+  let bpUniverse = GGAvatar.BP_UNIVERSES[0];
+
+  function bpTabsHTML() {
+    return GGAvatar.BP_UNIVERSES.map(u => {
+      const info = UNIVERSE_LABELS[u];
+      return `<button class="bp-tab ${u === bpUniverse ? 'active' : ''}" data-universe="${u}">${info.emoji} ${info.label.split(' — ')[0]}</button>`;
+    }).join('');
+  }
+
+  function renderBattlePass() {
+    const tiers = bpTiers.filter(t => t.universe === bpUniverse).sort((a, b) => a.tier - b.tier);
+    if (!tiers.length) return;
+
+    const xp = GGAvatar.getBattlePassXP(bpUniverse);
+    const premium = GGAvatar.hasPremiumPass(bpUniverse);
+    const claimed = GGAvatar.getClaimedRewards(bpUniverse);
+    const maxXp = tiers[tiers.length - 1].xpRequired;
+
+    // Tabs
+    document.getElementById('bp-tabs').innerHTML = bpTabsHTML();
+
+    // Progression
+    const pct = Math.min(100, Math.round((xp / maxXp) * 100));
+    document.getElementById('bp-progress-fill').style.width = pct + '%';
+    document.getElementById('bp-progress-label').textContent = `${xp} / ${maxXp} XP`;
+
+    // Premium CTA
+    const ctaEl = document.getElementById('bp-premium-cta');
+    if (premium) {
+      ctaEl.className = 'bp-premium-cta unlocked';
+      ctaEl.innerHTML = `<div class="bp-premium-text">✓ Passe <strong>Premium</strong> actif pour cet univers</div>`;
+    } else {
+      ctaEl.className = 'bp-premium-cta';
+      ctaEl.innerHTML = `
+        <div class="bp-premium-text">Débloque la voie <strong>Premium</strong> et double tes récompenses sur ce passe — 4,99 €</div>
+        <button class="bp-premium-btn" id="bp-premium-btn">Débloquer Premium</button>`;
+      document.getElementById('bp-premium-btn').addEventListener('click', async () => {
+        try {
+          const res = await fetch('/create-battlepass-checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ universe: bpUniverse })
+          });
+          const data = await res.json();
+          if (data.url) window.location.href = data.url;
+        } catch (e) {
+          alert('Impossible de lancer le paiement pour le moment.');
+        }
+      });
+    }
+
+    // Track des paliers
+    document.getElementById('bp-track').innerHTML = tiers.map(t => {
+      const reached = xp >= t.xpRequired;
+      const freeClaimed = claimed.free.includes(t.tier);
+      const premiumClaimed = claimed.premium.includes(t.tier);
+
+      let freeBtnClass = 'bp-locked', freeBtnLabel = 'Verrouillé';
+      if (freeClaimed) { freeBtnClass = 'bp-claimed'; freeBtnLabel = 'Récupéré ✓'; }
+      else if (reached) { freeBtnClass = 'bp-claimable'; freeBtnLabel = 'Récupérer'; }
+
+      let premBtnClass = 'bp-locked', premBtnLabel = 'Verrouillé';
+      if (!premium) { premBtnClass = 'bp-premium-locked'; premBtnLabel = 'Premium requis'; }
+      else if (premiumClaimed) { premBtnClass = 'bp-claimed'; premBtnLabel = 'Récupéré ✓'; }
+      else if (reached) { premBtnClass = 'bp-claimable'; premBtnLabel = 'Récupérer'; }
+
+      return `
+        <div class="bp-tier ${reached ? 'bp-reached' : ''}">
+          <div class="bp-tier-num">Palier ${t.tier} · ${t.xpRequired} XP</div>
+          <div class="bp-tier-reward">
+            <div class="bp-reward-icon">${t.freeReward.icon}</div>
+            <div class="bp-reward-label">${t.freeReward.label}</div>
+            <button class="bp-claim-btn ${freeBtnClass}" data-track="free" data-tier="${t.tier}" data-coins="${t.freeReward.coins}" ${freeBtnClass !== 'bp-claimable' ? 'disabled' : ''}>${freeBtnLabel}</button>
+          </div>
+          <div class="bp-tier-reward bp-premium-row">
+            <div class="bp-reward-icon">${t.premiumReward.icon}</div>
+            <div class="bp-reward-label">${t.premiumReward.label}</div>
+            <button class="bp-claim-btn ${premBtnClass}" data-track="premium" data-tier="${t.tier}" data-coins="${t.premiumReward.coins}" ${premBtnClass !== 'bp-claimable' ? 'disabled' : ''}>${premBtnLabel}</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    document.querySelectorAll('.bp-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        bpUniverse = btn.dataset.universe;
+        renderBattlePass();
+      });
+    });
+
+    document.querySelectorAll('.bp-claim-btn.bp-claimable').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const track = btn.dataset.track;
+        const tier = parseInt(btn.dataset.tier, 10);
+        const coins = parseInt(btn.dataset.coins, 10);
+        if (GGAvatar.claimBattlePassReward(bpUniverse, tier, track, coins)) {
+          refreshCoins();
+          renderBattlePass();
+        }
+      });
+    });
+  }
+
+  async function loadBattlePass() {
+    try {
+      const res = await fetch('/api/battlepass');
+      bpTiers = await res.json();
+      renderBattlePass();
+    } catch (e) {
+      // silencieux : la boutique reste utilisable même sans passe de combat
+    }
+  }
+
+  document.getElementById('bp-daily-btn').addEventListener('click', () => {
+    const gained = GGAvatar.claimDailyBattlePassXP();
+    if (gained > 0) {
+      renderBattlePass();
+    } else {
+      alert('Tu as déjà récupéré ton bonus d\'XP aujourd\'hui. Reviens demain !');
+    }
+  });
+
+  // Retour de paiement Stripe : ?bp_premium=<universe>
+  (function handlePremiumReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const universe = params.get('bp_premium');
+    if (universe && GGAvatar.BP_UNIVERSES.includes(universe)) {
+      GGAvatar.setPremiumPass(universe);
+      bpUniverse = universe;
+      window.history.replaceState({}, '', 'boutique.html');
+    }
+  })();
+
   refreshAvatar();
   refreshCoins();
   refreshEquipped();
   setupEditor();
   loadShop();
+  loadBattlePass();
 })();
 </script>
 </body>

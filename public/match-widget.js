@@ -125,6 +125,9 @@
         elMessages.innerHTML = '';
         const partner = data.players.find((p) => p !== myName) || data.players.find((p) => p !== socket.id) || data.players[0];
         elPartner.textContent = partner;
+        if (window.GGAvatar && window.GGAvatar.addBattlePassXP) {
+          window.GGAvatar.addBattlePassXP(universe, window.GGAvatar.BP_MATCH_XP);
+        }
       });
 
       socket.on('message', (data) => {

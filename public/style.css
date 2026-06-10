@@ -316,6 +316,51 @@ footer { padding: 3rem; border-top: 1px solid rgba(255,255,255,0.06); display: f
   .shop-items-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 }
 
+/* ============================================
+   Passe de combat
+   ============================================ */
+.battlepass-section { max-width: 1400px; margin: 0 auto; padding: 0 3rem 6rem; }
+.bp-header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+.bp-title { font-family: 'DM Serif Display', serif; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -1px; }
+.bp-subtitle { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 3px; color: var(--grey); text-transform: uppercase; }
+
+.bp-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+.bp-tab { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); color: var(--grey); padding: 0.6rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.75rem; border-radius: 2px; cursor: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
+.bp-tab:hover { color: var(--white); border-color: rgba(255,255,255,0.3); }
+.bp-tab.active { background: var(--shop); color: var(--black); border-color: var(--shop); font-weight: 600; }
+
+.bp-progress-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.4rem; }
+.bp-progress-bar { width: 100%; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.bp-progress-fill { height: 100%; background: var(--shop); transition: width 0.4s; }
+.bp-progress-label { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--grey); letter-spacing: 1px; white-space: nowrap; }
+.bp-progress-wrap { margin-bottom: 1.5rem; }
+
+.bp-premium-cta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border: 1px solid var(--shop); border-radius: 4px; background: rgba(255,209,102,0.06); margin-bottom: 1.5rem; flex-wrap: wrap; }
+.bp-premium-cta.unlocked { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); }
+.bp-premium-text { font-size: 0.85rem; color: var(--white); }
+.bp-premium-text strong { color: var(--shop); }
+.bp-premium-btn { background: var(--shop); color: var(--black); border: none; padding: 0.7rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; cursor: none; border-radius: 2px; transition: all 0.2s; white-space: nowrap; }
+.bp-premium-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(255,209,102,0.25); }
+
+.bp-track { display: flex; gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); overflow-x: auto; }
+.bp-tier { flex: 0 0 140px; background: var(--black); display: flex; flex-direction: column; }
+.bp-tier.bp-reached .bp-tier-num { color: var(--shop); }
+.bp-tier-num { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; color: var(--grey); text-align: center; padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.bp-tier-reward { padding: 1rem 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.bp-tier-reward.bp-premium-row { background: rgba(255,209,102,0.03); border-bottom: none; }
+.bp-reward-icon { font-size: 1.6rem; }
+.bp-reward-label { font-size: 0.7rem; color: rgba(255,255,255,0.6); }
+.bp-claim-btn { width: 100%; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: var(--white); padding: 0.45rem 0.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.62rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; cursor: none; border-radius: 2px; transition: all 0.2s; }
+.bp-claim-btn:hover { border-color: rgba(255,255,255,0.4); }
+.bp-claim-btn.bp-claimable { background: var(--shop); color: var(--black); border-color: var(--shop); }
+.bp-claim-btn.bp-claimed { background: rgba(255,209,102,0.15); border-color: var(--shop); color: var(--shop); cursor: default; }
+.bp-claim-btn.bp-locked, .bp-claim-btn.bp-premium-locked { opacity: 0.4; cursor: default; }
+
+@media (max-width: 768px) {
+  .battlepass-section { padding: 0 1.5rem 4rem; }
+  .bp-tier { flex: 0 0 112px; }
+}
+
 /* RESPONSIVE */
 @media (max-width: 1024px) {
   .universes-grid { grid-template-columns: repeat(2, 1fr); }

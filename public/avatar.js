@@ -98,7 +98,7 @@
   }
 
   function getEquipped() {
-    return read(KEY_EQUIPPED, { accessory: null, outfit: null });
+    return Object.assign({ accessory: null, outfit: null, hairstyle: null }, read(KEY_EQUIPPED, {}));
   }
 
   function equipItem(item) {
@@ -107,6 +107,8 @@
       eq.accessory = (eq.accessory && eq.accessory._id === item._id) ? null : item;
     } else if (item.type === 'outfit') {
       eq.outfit = (eq.outfit && eq.outfit._id === item._id) ? null : item;
+    } else if (item.type === 'hairstyle') {
+      eq.hairstyle = (eq.hairstyle && eq.hairstyle._id === item._id) ? null : item;
     }
     write(KEY_EQUIPPED, eq);
     return eq;
@@ -160,6 +162,8 @@
     equipped = equipped || getEquipped();
     const outfitColor = (equipped.outfit && equipped.outfit.color) || config.outfitColor;
     const accessoryIcon = equipped.accessory ? equipped.accessory.icon : null;
+    const hairStyle = (equipped.hairstyle && equipped.hairstyle.value) || config.hairStyle;
+    const hairColor = (equipped.hairstyle && equipped.hairstyle.color) || config.hairColor;
 
     return `
 <svg viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg" class="avatar-svg">
@@ -168,7 +172,7 @@
   <circle cx="100" cy="80" r="48" fill="${config.skinTone}"/>
   ${eyesMarkup(config.eyes)}
   <path d="M85 112 Q 100 122 115 112" stroke="#7a4a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
-  ${hairPath(config.hairStyle, config.hairColor)}
+  ${hairPath(hairStyle, hairColor)}
   ${accessoryIcon ? `<text x="100" y="48" font-size="34" text-anchor="middle">${accessoryIcon}</text>` : ''}
 </svg>`;
   }
@@ -177,6 +181,66 @@
     const el = typeof target === 'string' ? document.getElementById(target) : target;
     if (!el) return;
     el.innerHTML = renderAvatarSVG(config, equipped);
+  }
+
+  // --- Passe de combat (par univers) ---
+
+  const KEY_BP_XP = 'ggmatch_bp_xp'; // { universe: xp }
+  const KEY_BP_PREMIUM = 'ggmatch_bp_premium'; // { universe: bool }
+  const KEY_BP_CLAIMED = 'ggmatch_bp_claimed'; // { universe: { free: [tiers], premium: [tiers] } }
+  const KEY_BP_LAST_DAILY = 'ggmatch_bp_last_daily';
+
+  const BP_UNIVERSES = ['GGMatch', 'BeatMatch', 'StudyMatch', 'TalkMatch', 'GymMatch', 'CreateMatch'];
+  const BP_DAILY_XP = 15;
+  const BP_MATCH_XP = 25;
+
+  function getBattlePassXP(universe) {
+    const all = read(KEY_BP_XP, {});
+    return all[universe] || 0;
+  }
+
+  function addBattlePassXP(universe, amount) {
+    const all = read(KEY_BP_XP, {});
+    all[universe] = (all[universe] || 0) + amount;
+    write(KEY_BP_XP, all);
+    return all[universe];
+  }
+
+  // Bonus quotidien d'XP pour tous les passes de combat (une fois par jour)
+  function claimDailyBattlePassXP() {
+    const today = new Date().toISOString().slice(0, 10);
+    const last = localStorage.getItem(KEY_BP_LAST_DAILY);
+    if (last === today) return 0;
+    localStorage.setItem(KEY_BP_LAST_DAILY, today);
+    BP_UNIVERSES.forEach((u) => addBattlePassXP(u, BP_DAILY_XP));
+    return BP_DAILY_XP;
+  }
+
+  function hasPremiumPass(universe) {
+    const all = read(KEY_BP_PREMIUM, {});
+    return !!all[universe];
+  }
+
+  function setPremiumPass(universe) {
+    const all = read(KEY_BP_PREMIUM, {});
+    all[universe] = true;
+    write(KEY_BP_PREMIUM, all);
+  }
+
+  function getClaimedRewards(universe) {
+    const all = read(KEY_BP_CLAIMED, {});
+    return all[universe] || { free: [], premium: [] };
+  }
+
+  function claimBattlePassReward(universe, tier, track, coins) {
+    const all = read(KEY_BP_CLAIMED, {});
+    const entry = all[universe] || { free: [], premium: [] };
+    if (entry[track].includes(tier)) return false;
+    entry[track].push(tier);
+    all[universe] = entry;
+    write(KEY_BP_CLAIMED, all);
+    if (coins) addCoins(coins);
+    return true;
   }
 
   window.GGAvatar = {
@@ -194,6 +258,16 @@
     getEquipped,
     equipItem,
     renderAvatarSVG,
-    mountAvatar
+    mountAvatar,
+    BP_UNIVERSES,
+    BP_DAILY_XP,
+    BP_MATCH_XP,
+    getBattlePassXP,
+    addBattlePassXP,
+    claimDailyBattlePassXP,
+    hasPremiumPass,
+    setPremiumPass,
+    getClaimedRewards,
+    claimBattlePassReward
   };
 })();
