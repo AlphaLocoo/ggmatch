@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Tournois & Lives | Match</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  body { cursor: auto; }
+  .cursor, .cursor-follower { display: none; }
+  .admin-wrap { max-width: 1100px; margin: 0 auto; padding: 6rem 2rem 6rem; }
+  .admin-title { font-family: 'DM Serif Display', serif; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -1px; margin-bottom: 0.5rem; }
+  .admin-sub { color: var(--grey); font-size: 0.9rem; margin-bottom: 3rem; }
+  .admin-key-box { display: flex; gap: 1rem; margin-bottom: 3rem; flex-wrap: wrap; }
+  .admin-key-box input { flex: 1; min-width: 220px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); color: var(--white); padding: 0.85rem 1rem; font-family: 'DM Mono', monospace; font-size: 0.85rem; border-radius: 2px; }
+  .admin-btn { background: var(--white); color: var(--black); border: none; padding: 0.85rem 1.75rem; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; border-radius: 2px; transition: all 0.2s; }
+  .admin-btn:hover { background: var(--cream); }
+  .admin-btn.danger { background: transparent; color: #ff6b6b; border: 1px solid rgba(255,107,107,0.4); }
+  .admin-btn.danger:hover { background: rgba(255,107,107,0.1); }
+  .admin-btn.ghost { background: transparent; color: var(--grey); border: 1px solid rgba(255,255,255,0.15); }
+  .admin-btn.ghost:hover { color: var(--white); border-color: rgba(255,255,255,0.4); }
+  .admin-status { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--grey); margin-bottom: 2rem; }
+  .admin-status.ok { color: var(--gaming); }
+  .admin-status.err { color: #ff6b6b; }
+
+  .admin-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; padding: 2rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; margin-bottom: 4rem; }
+  .admin-form h2 { grid-column: 1 / -1; font-family: 'DM Serif Display', serif; font-size: 1.4rem; font-weight: normal; margin-bottom: 0.5rem; }
+  .admin-field { display: flex; flex-direction: column; gap: 0.4rem; }
+  .admin-field.full { grid-column: 1 / -1; }
+  .admin-field label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--grey); }
+  .admin-field input, .admin-field select, .admin-field textarea { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); color: var(--white); padding: 0.75rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; border-radius: 2px; }
+  .admin-field textarea { resize: vertical; min-height: 60px; }
+  .admin-form-actions { grid-column: 1 / -1; display: flex; gap: 1rem; }
+
+  .admin-events { display: flex; flex-direction: column; gap: 1px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); }
+  .admin-event { background: var(--black); padding: 1.25rem 1.5rem; display: grid; grid-template-columns: 100px 90px 1fr auto; gap: 1.5rem; align-items: center; }
+  .admin-event-universe { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; color: var(--grey); }
+  .admin-event-type { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; padding: 0.3rem 0.6rem; border: 1px solid rgba(255,255,255,0.12); border-radius: 2px; text-align: center; }
+  .admin-event-info .title { font-family: 'DM Serif Display', serif; font-size: 1.05rem; margin-bottom: 0.2rem; }
+  .admin-event-info .meta { font-size: 0.75rem; color: var(--grey); }
+  .admin-event-actions { display: flex; gap: 0.5rem; }
+  .admin-event-actions button { padding: 0.5rem 1rem; font-size: 0.7rem; }
+
+  @media (max-width: 768px) {
+    .admin-form { grid-template-columns: 1fr; }
+    .admin-event { grid-template-columns: 1fr; gap: 0.5rem; }
+    .admin-event-actions { justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/">Match</a>
+  <ul class="nav-links"></ul>
+  <a class="nav-cta" href="/">Retour au site</a>
+</nav>
+
+<div class="admin-wrap">
+  <h1 class="admin-title">Tournois & Lives</h1>
+  <p class="admin-sub">Gestion des événements affichés sur les pages univers. Protégé par clé admin (variable d'environnement <code>ADMIN_KEY</code>).</p>
+
+  <div class="admin-key-box">
+    <input type="password" id="admin-key" placeholder="Clé admin">
+    <button class="admin-btn" id="admin-key-save">Connexion</button>
+  </div>
+  <div class="admin-status" id="admin-status"></div>
+
+  <form class="admin-form" id="event-form">
+    <h2>Ajouter / modifier un événement</h2>
+    <input type="hidden" id="event-id">
+    <div class="admin-field">
+      <label>Univers</label>
+      <select id="f-universe">
+        <option>GGMatch</option>
+        <option>BeatMatch</option>
+        <option>StudyMatch</option>
+        <option>TalkMatch</option>
+        <option>GymMatch</option>
+        <option>CreateMatch</option>
+      </select>
+    </div>
+    <div class="admin-field">
+      <label>Type</label>
+      <select id="f-type">
+        <option value="tournoi">Tournoi</option>
+        <option value="live">Live</option>
+      </select>
+    </div>
+    <div class="admin-field">
+      <label>Statut</label>
+      <select id="f-status">
+        <option value="upcoming">À venir</option>
+        <option value="live">En cours</option>
+        <option value="ended">Terminé</option>
+      </select>
+    </div>
+    <div class="admin-field full">
+      <label>Titre</label>
+      <input type="text" id="f-title" placeholder="Ex : Tournoi Valorant 5v5 — Saison Été">
+    </div>
+    <div class="admin-field full">
+      <label>Description</label>
+      <textarea id="f-description" placeholder="Quelques mots sur l'événement"></textarea>
+    </div>
+    <div class="admin-field">
+      <label>Date & heure</label>
+      <input type="datetime-local" id="f-date">
+    </div>
+    <div class="admin-field">
+      <label>Format</label>
+      <input type="text" id="f-format" placeholder="Ex : 5v5 · BO3">
+    </div>
+    <div class="admin-field">
+      <label>Récompense</label>
+      <input type="text" id="f-prize" placeholder="Ex : 500€ + skins">
+    </div>
+    <div class="admin-field">
+      <label>Hôte</label>
+      <input type="text" id="f-host" placeholder="Ex : Équipe GGMatch">
+    </div>
+    <div class="admin-field full">
+      <label>Lien</label>
+      <input type="text" id="f-link" placeholder="/?univers=GGMatch#jouer">
+    </div>
+    <div class="admin-form-actions">
+      <button type="submit" class="admin-btn" id="f-submit">Ajouter l'événement</button>
+      <button type="button" class="admin-btn ghost" id="f-cancel" style="display:none;">Annuler la modification</button>
+    </div>
+  </form>
+
+  <div class="admin-events" id="admin-events">
+    <div class="admin-event"><span style="color:var(--grey)">Connecte-toi avec la clé admin pour voir les événements.</span></div>
+  </div>
+</div>
+
+<script>
+  const API = '/api/events';
+  let adminKey = localStorage.getItem('ggmatch_admin_key') || '';
+  document.getElementById('admin-key').value = adminKey;
+
+  const statusEl = document.getElementById('admin-status');
+  const eventsEl = document.getElementById('admin-events');
+  const form = document.getElementById('event-form');
+  const cancelBtn = document.getElementById('f-cancel');
+  const submitBtn = document.getElementById('f-submit');
+
+  function setStatus(msg, type) {
+    statusEl.textContent = msg;
+    statusEl.className = 'admin-status' + (type ? ' ' + type : '');
+  }
+
+  document.getElementById('admin-key-save').addEventListener('click', () => {
+    adminKey = document.getElementById('admin-key').value.trim();
+    localStorage.setItem('ggmatch_admin_key', adminKey);
+    loadEvents();
+  });
+
+  async function loadEvents() {
+    if (!adminKey) {
+      setStatus('Entre ta clé admin pour charger les événements.', 'err');
+      return;
+    }
+    try {
+      const res = await fetch(API, { headers: { 'x-admin-key': adminKey } });
+      if (!res.ok) {
+        setStatus('Clé admin invalide ou erreur serveur (' + res.status + ').', 'err');
+        eventsEl.innerHTML = '';
+        return;
+      }
+      const events = await res.json();
+      setStatus(events.length + ' événement(s) chargé(s).', 'ok');
+      renderEvents(events);
+    } catch (e) {
+      setStatus('Erreur réseau : ' + e.message, 'err');
+    }
+  }
+
+  function renderEvents(events) {
+    if (!events.length) {
+      eventsEl.innerHTML = '<div class="admin-event"><span style="color:var(--grey)">Aucun événement pour le moment.</span></div>';
+      return;
+    }
+    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    eventsEl.innerHTML = events.map((ev) => `
+      <div class="admin-event">
+        <div class="admin-event-universe">${ev.universe}</div>
+        <div class="admin-event-type">${ev.type}</div>
+        <div class="admin-event-info">
+          <div class="title">${escapeHtml(ev.title || '')}</div>
+          <div class="meta">${ev.date ? new Date(ev.date).toLocaleString('fr-FR') : ''} · ${escapeHtml(ev.format || '')} · ${ev.status}</div>
+        </div>
+        <div class="admin-event-actions">
+          <button class="admin-btn ghost" data-edit="${ev._id}">Modifier</button>
+          <button class="admin-btn danger" data-delete="${ev._id}">Supprimer</button>
+        </div>
+      </div>
+    `).join('');
+
+    eventsEl.querySelectorAll('[data-edit]').forEach((btn) => {
+      btn.addEventListener('click', () => editEvent(events.find((e) => e._id === btn.dataset.edit)));
+    });
+    eventsEl.querySelectorAll('[data-delete]').forEach((btn) => {
+      btn.addEventListener('click', () => deleteEvent(btn.dataset.delete));
+    });
+  }
+
+  function editEvent(ev) {
+    document.getElementById('event-id').value = ev._id;
+    document.getElementById('f-universe').value = ev.universe;
+    document.getElementById('f-type').value = ev.type;
+    document.getElementById('f-status').value = ev.status || 'upcoming';
+    document.getElementById('f-title').value = ev.title || '';
+    document.getElementById('f-description').value = ev.description || '';
+    document.getElementById('f-date').value = ev.date ? toLocalInputValue(ev.date) : '';
+    document.getElementById('f-format').value = ev.format || '';
+    document.getElementById('f-prize').value = ev.prize || '';
+    document.getElementById('f-host').value = ev.host || '';
+    document.getElementById('f-link').value = ev.link || '';
+    submitBtn.textContent = 'Enregistrer les modifications';
+    cancelBtn.style.display = 'inline-block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function toLocalInputValue(dateStr) {
+    const d = new Date(dateStr);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  cancelBtn.addEventListener('click', resetForm);
+
+  function resetForm() {
+    form.reset();
+    document.getElementById('event-id').value = '';
+    submitBtn.textContent = "Ajouter l'événement";
+    cancelBtn.style.display = 'none';
+  }
+
+  async function deleteEvent(id) {
+    if (!confirm('Supprimer cet événement ?')) return;
+    try {
+      const res = await fetch(`${API}/${id}`, { method: 'DELETE', headers: { 'x-admin-key': adminKey } });
+      if (!res.ok) { setStatus('Erreur lors de la suppression (' + res.status + ').', 'err'); return; }
+      setStatus('Événement supprimé.', 'ok');
+      loadEvents();
+    } catch (e) {
+      setStatus('Erreur réseau : ' + e.message, 'err');
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!adminKey) { setStatus('Entre ta clé admin d\'abord.', 'err'); return; }
+
+    const id = document.getElementById('event-id').value;
+    const dateVal = document.getElementById('f-date').value;
+    const payload = {
+      universe: document.getElementById('f-universe').value,
+      type: document.getElementById('f-type').value,
+      status: document.getElementById('f-status').value,
+      title: document.getElementById('f-title').value,
+      description: document.getElementById('f-description').value,
+      date: dateVal ? new Date(dateVal).toISOString() : null,
+      format: document.getElementById('f-format').value,
+      prize: document.getElementById('f-prize').value,
+      host: document.getElementById('f-host').value,
+      link: document.getElementById('f-link').value
+    };
+
+    try {
+      const res = await fetch(id ? `${API}/${id}` : API, {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) { setStatus('Erreur lors de l\'enregistrement (' + res.status + ').', 'err'); return; }
+      setStatus(id ? 'Événement modifié.' : 'Événement ajouté.', 'ok');
+      resetForm();
+      loadEvents();
+    } catch (e) {
+      setStatus('Erreur réseau : ' + e.message, 'err');
+    }
+  });
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  if (adminKey) loadEvents();
+</script>
+</body>
+</html>

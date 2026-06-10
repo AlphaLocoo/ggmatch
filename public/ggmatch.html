@@ -38,6 +38,8 @@
   </div>
 </section>
 
+<div id="match-widget-root" class="match-widget theme-gaming"></div>
+
 <div class="stats-bar" style="margin: 0 3rem;">
   <div class="stat-item"><div class="stat-big">24K</div><div class="stat-label">Joueurs en ligne</div></div>
   <div class="stat-item"><div class="stat-big">200+</div><div class="stat-label">Jeux supportés</div></div>
@@ -86,6 +88,10 @@
     <div class="step"><div class="step-num">— 04</div><span class="step-icon">🏆</span><div class="step-title">Progresse</div><p class="step-desc">Tournois, coaching, stats. Monte en rang dans tes jeux préférés.</p></div>
   </div>
 </div>
+
+<div class="section-divider"></div>
+
+<div id="events-root"></div>
 
 <div class="section-divider"></div>
 
@@ -174,6 +180,8 @@
   <div class="footer-copy">© 2025 Match</div>
 </footer>
 
+<script src="/socket.io/socket.io.js"></script>
+<script src="match-widget.js" data-universe="GGMatch"></script>
 <script src="app.js"></script>
 </body>
 </html>
