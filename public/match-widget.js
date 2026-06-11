@@ -90,8 +90,12 @@
       <div class="mw-chat" id="mw-chat">
         <div class="mw-chat-header">
           <div class="mw-chat-partner">Connecté avec <span id="mw-partner-name"></span></div>
-          <button class="mw-btn mw-btn-secondary" id="mw-new">Nouveau match</button>
+          <div style="display:flex; gap:0.5rem;">
+            <button class="mw-btn mw-btn-secondary mw-voice-btn" id="mw-voice-btn">🎙️ Vocal</button>
+            <button class="mw-btn mw-btn-secondary" id="mw-new">Nouveau match</button>
+          </div>
         </div>
+        <div class="mw-voice-incoming" id="mw-voice-incoming" style="display:none"></div>
         <div class="mw-messages" id="mw-messages"></div>
         <div class="mw-chat-input">
           <input type="text" id="mw-msg-input" placeholder="Écris un message…">
@@ -109,10 +113,15 @@
     const elPartner = root.querySelector('#mw-partner-name');
     const elMsgInput = root.querySelector('#mw-msg-input');
     const elSend = root.querySelector('#mw-send');
+    const elVoiceBtn = root.querySelector('#mw-voice-btn');
+    const elVoiceIncoming = root.querySelector('#mw-voice-incoming');
 
     let socket = null;
     let room = null;
     let myName = guestName;
+    let partnerId = null;
+    let voice = null;
+    let voiceState = 'idle'; // idle | requesting | incoming | connected
 
     function ensureSocket() {
       if (socket) return socket;
@@ -125,6 +134,8 @@
         elMessages.innerHTML = '';
         const partner = data.players.find((p) => p !== myName) || data.players.find((p) => p !== socket.id) || data.players[0];
         elPartner.textContent = partner;
+        partnerId = (data.playerIds || []).find((id) => id !== socket.id) || null;
+        resetVoice();
         if (window.GGAvatar && window.GGAvatar.addBattlePassXP) {
           window.GGAvatar.addBattlePassXP(universe, window.GGAvatar.BP_MATCH_XP);
         }
@@ -134,7 +145,127 @@
         appendMessage(data.from === myName ? 'me' : 'them', data.text);
       });
 
+      socket.on('webrtc_signal', (msg) => {
+        const data = msg.data || {};
+        if (data.type === 'voice_request') {
+          voiceState = 'incoming';
+          showIncomingVoice();
+        } else if (data.type === 'voice_accept') {
+          // L'autre joueur a accepté : on initie la connexion
+          ensureVoiceManager();
+          voice.getLocalStream().then(() => {
+            voiceState = 'connected';
+            updateVoiceBtn();
+            voice.callPeer(partnerId);
+          }).catch(() => {
+            voiceState = 'idle';
+            updateVoiceBtn();
+          });
+        } else if (data.type === 'voice_decline') {
+          voiceState = 'idle';
+          updateVoiceBtn();
+          appendSystemMessage("L'autre joueur n'est pas disponible pour le vocal.");
+        } else if (data.type === 'voice_hangup') {
+          if (voice) voice.closeAll();
+          voiceState = 'idle';
+          hideIncomingVoice();
+          updateVoiceBtn();
+        } else {
+          ensureVoiceManager();
+          voice.handleSignal(msg);
+        }
+      });
+
       return socket;
+    }
+
+    function ensureVoiceManager() {
+      if (!voice) voice = window.GGVoice.createVoiceManager(socket, {});
+      return voice;
+    }
+
+    function resetVoice() {
+      if (voice) voice.closeAll();
+      voice = null;
+      voiceState = 'idle';
+      hideIncomingVoice();
+      updateVoiceBtn();
+    }
+
+    function updateVoiceBtn() {
+      if (!elVoiceBtn) return;
+      if (voiceState === 'connected') {
+        elVoiceBtn.textContent = '🔇 Quitter le vocal';
+        elVoiceBtn.classList.add('active');
+      } else if (voiceState === 'requesting') {
+        elVoiceBtn.textContent = '🎙️ En attente…';
+        elVoiceBtn.classList.remove('active');
+      } else {
+        elVoiceBtn.textContent = '🎙️ Vocal';
+        elVoiceBtn.classList.remove('active');
+      }
+    }
+
+    function showIncomingVoice() {
+      if (!elVoiceIncoming) return;
+      elVoiceIncoming.style.display = 'flex';
+      elVoiceIncoming.innerHTML = `
+        <span>${escapeHtml(elPartner.textContent || 'Ton partenaire')} te propose un appel vocal.</span>
+        <div class="mw-voice-incoming-actions">
+          <button class="mw-btn" id="mw-voice-accept">Accepter</button>
+          <button class="mw-btn mw-btn-secondary" id="mw-voice-decline">Refuser</button>
+        </div>
+      `;
+      elVoiceIncoming.querySelector('#mw-voice-accept').addEventListener('click', () => {
+        ensureVoiceManager();
+        voice.getLocalStream().then(() => {
+          voiceState = 'connected';
+          hideIncomingVoice();
+          updateVoiceBtn();
+          if (partnerId) socket.emit('webrtc_signal', { to: partnerId, data: { type: 'voice_accept' } });
+        }).catch(() => {
+          appendSystemMessage("Impossible d'accéder au micro.");
+          hideIncomingVoice();
+        });
+      });
+      elVoiceIncoming.querySelector('#mw-voice-decline').addEventListener('click', () => {
+        if (partnerId) socket.emit('webrtc_signal', { to: partnerId, data: { type: 'voice_decline' } });
+        voiceState = 'idle';
+        hideIncomingVoice();
+        updateVoiceBtn();
+      });
+    }
+
+    function hideIncomingVoice() {
+      if (!elVoiceIncoming) return;
+      elVoiceIncoming.style.display = 'none';
+      elVoiceIncoming.innerHTML = '';
+    }
+
+    if (elVoiceBtn) {
+      elVoiceBtn.addEventListener('click', () => {
+        if (!partnerId || !socket) return;
+        if (voiceState === 'connected') {
+          if (voice) voice.closeAll();
+          voiceState = 'idle';
+          socket.emit('webrtc_signal', { to: partnerId, data: { type: 'voice_hangup' } });
+          updateVoiceBtn();
+        } else if (voiceState === 'idle') {
+          voiceState = 'requesting';
+          updateVoiceBtn();
+          socket.emit('webrtc_signal', { to: partnerId, data: { type: 'voice_request' } });
+        }
+      });
+    }
+
+    function appendSystemMessage(text) {
+      const el = document.createElement('div');
+      el.className = 'mw-msg them';
+      el.style.opacity = '0.6';
+      el.style.fontStyle = 'italic';
+      el.textContent = text;
+      elMessages.appendChild(el);
+      elMessages.scrollTop = elMessages.scrollHeight;
     }
 
     function startSearch() {
@@ -158,6 +289,7 @@
     });
 
     elNew.addEventListener('click', () => {
+      resetVoice();
       elChat.classList.remove('active');
       startSearch();
     });

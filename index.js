@@ -275,6 +275,12 @@ app.use(express.static('public'));
 
 const queue = [];
 
+// Lobby interactif : joueurs présents par univers (déplacement + vocal de groupe)
+const lobbyPlayers = {}; // socket.id -> { universe, username, x, y, inVoice, config, equipped }
+function lobbyRoomName(universe) {
+  return `lobby_${universe}`;
+}
+
 // Protection simple des routes admin (clé définie via la variable d'environnement ADMIN_KEY)
 function requireAdmin(req, res, next) {
   const key = req.headers['x-admin-key'];
@@ -493,6 +499,7 @@ io.on('connection', (socket) => {
       io.to(room).emit('match_found', {
         room,
         players: [socket.username, best.username],
+        playerIds: [socket.id, best.id],
         game: socket.game,
         filters: { you: socket.filters, partner: best.filters }
       });
@@ -511,11 +518,79 @@ io.on('connection', (socket) => {
     if (i > -1) queue.splice(i, 1);
   });
 
+  // --- Lobby interactif (déplacement par clic + vocal de groupe) ---
+
+  socket.on('lobby_join', (data) => {
+    const universe = (data && data.universe) || 'GGMatch';
+    const username = (data && data.username && data.username.trim()) || `Invité${Math.floor(1000 + Math.random() * 9000)}`;
+    const config = (data && data.config) || null;
+    const equipped = (data && data.equipped) || null;
+
+    leaveLobby(socket);
+
+    const x = 80 + Math.random() * 740;
+    const y = 80 + Math.random() * 320;
+    socket.lobbyUniverse = universe;
+    lobbyPlayers[socket.id] = { universe, username, x, y, inVoice: false, config, equipped };
+    socket.join(lobbyRoomName(universe));
+
+    const others = Object.entries(lobbyPlayers)
+      .filter(([id, p]) => id !== socket.id && p.universe === universe)
+      .map(([id, p]) => ({ id, username: p.username, x: p.x, y: p.y, inVoice: p.inVoice, config: p.config, equipped: p.equipped }));
+
+    socket.emit('lobby_state', { self: { id: socket.id, x, y, username }, players: others });
+    socket.to(lobbyRoomName(universe)).emit('lobby_player_joined', { id: socket.id, username, x, y, inVoice: false, config, equipped });
+  });
+
+  socket.on('lobby_move', (data) => {
+    const p = lobbyPlayers[socket.id];
+    if (!p || !data) return;
+    p.x = data.x;
+    p.y = data.y;
+    socket.to(lobbyRoomName(p.universe)).emit('lobby_player_moved', { id: socket.id, x: p.x, y: p.y });
+  });
+
+  socket.on('lobby_leave', () => leaveLobby(socket));
+
+  // Vocal de groupe (mesh WebRTC) : on annonce sa présence aux autres membres déjà en vocal
+  socket.on('voice_join', () => {
+    const p = lobbyPlayers[socket.id];
+    if (!p) return;
+    const peers = Object.entries(lobbyPlayers)
+      .filter(([id, o]) => id !== socket.id && o.universe === p.universe && o.inVoice)
+      .map(([id]) => id);
+    p.inVoice = true;
+    socket.emit('voice_peers', { peers });
+    socket.to(lobbyRoomName(p.universe)).emit('voice_peer_joined', { id: socket.id });
+  });
+
+  socket.on('voice_leave', () => {
+    const p = lobbyPlayers[socket.id];
+    if (!p) return;
+    p.inVoice = false;
+    socket.to(lobbyRoomName(p.universe)).emit('voice_peer_left', { id: socket.id });
+  });
+
+  // Relais générique de signalisation WebRTC (lobby vocal de groupe + vocal 1v1 en match)
+  socket.on('webrtc_signal', (data) => {
+    if (!data || !data.to) return;
+    io.to(data.to).emit('webrtc_signal', { from: socket.id, data: data.data });
+  });
+
   socket.on('disconnect', () => {
     const i = queue.indexOf(socket);
     if (i > -1) queue.splice(i, 1);
+    leaveLobby(socket);
   });
 });
+
+function leaveLobby(socket) {
+  const p = lobbyPlayers[socket.id];
+  if (!p) return;
+  socket.to(lobbyRoomName(p.universe)).emit('lobby_player_left', { id: socket.id });
+  socket.leave(lobbyRoomName(p.universe));
+  delete lobbyPlayers[socket.id];
+}
 
 app.post('/create-checkout', async (req, res) => {
   const { priceId } = req.body;

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lobby — Match</title>
+<meta name="description" content="Le lobby Match : retrouve les autres joueurs en direct, déplace ton avatar et discute en vocal de groupe avant de lancer un match.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-follower" id="cursorFollower"></div>
+
+<nav>
+  <a class="nav-logo" href="/">Match</a>
+  <ul class="nav-links">
+    <li><a href="/#universes">Univers</a></li>
+    <li><a href="/#how">Comment</a></li>
+    <li><a href="boutique.html">Boutique</a></li>
+    <li><a href="lobby.html">Lobby</a></li>
+    <li><a href="/#pricing">Tarifs</a></li>
+  </ul>
+  <a class="nav-cta" href="/#jouer">Rejoindre</a>
+</nav>
+
+<section class="hero hero-shop">
+  <div class="hero-number">Lobby — En direct</div>
+  <span class="hero-emoji">🧭</span>
+  <h1 class="hero-title">Le<br><em class="accent-gaming" id="lobby-accent-em">Lobby.</em></h1>
+  <div class="hero-bottom">
+    <p class="hero-desc">Choisis un univers, déplace-toi sur la carte et rejoins le vocal de groupe pour discuter avec les autres joueurs en direct.</p>
+    <div class="hero-scroll"><div class="scroll-line"></div>Découvrir</div>
+  </div>
+</section>
+
+<div class="section-divider" style="margin: 0 3rem;"></div>
+
+<div id="lobby-root" class="lobby-section theme-gaming"></div>
+
+<div class="section-divider"></div>
+
+<footer>
+  <a class="footer-logo" href="/" style="text-decoration:none;color:inherit;">Match</a>
+  <ul class="footer-links">
+    <li><a href="/#vision">À propos</a></li>
+    <li><a href="mailto:support@ggmatch.gg">Support</a></li>
+    <li><a href="legal.html">CGU</a></li>
+  </ul>
+  <div class="footer-copy">© 2025 Match</div>
+</footer>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="avatar.js"></script>
+<script src="voice.js"></script>
+<script src="lobby.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
