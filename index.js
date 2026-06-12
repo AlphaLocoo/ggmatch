@@ -672,4 +672,316 @@ app.get('/api/me', requireAuth, async (req, res) => {
     const profile = user.toObject();
     // Avantage Pro : le Pass Saison Premium est inclus sur les 6 univers sans achat séparé.
     if (profile.plan === 'pro') {
-      profile.ba
+      profile.battlePassPremium = profile.battlePassPremium || {};
+      for (const universe of BP_UNIVERSES) {
+        profile.battlePassPremium[universe] = true;
+      }
+    }
+    res.json(profile);
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Mise à jour partielle du profil (synchronisation avec le client)
+app.put('/api/profile', requireAuth, async (req, res) => {
+  try {
+    const allowed = ['coins', 'avatarConfig', 'inventory', 'equipped', 'battlePassXP', 'battlePassPremium', 'battlePassClaimed'];
+    const update = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) update[key] = req.body[key];
+    }
+    const user = await User.findOneAndUpdate({ username: req.username }, update, { new: true, upsert: false }).select('-password');
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    res.json(user);
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Ajoute une partie à l'historique du joueur (50 dernières conservées)
+app.post('/api/profile/match', requireAuth, async (req, res) => {
+  try {
+    const { universe, partner } = req.body;
+    const user = await User.findOneAndUpdate(
+      { username: req.username },
+      { $push: { matchHistory: { $each: [{ universe, partner, date: new Date() }], $slice: -50 } } },
+      { new: true }
+    ).select('-password');
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    res.json(user);
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Calcule un score d'affinité entre deux joueurs en file d'attente
+// selon les filtres choisis (jeu, niveau, langue, etc.) pour cet univers.
+function matchScore(a, b) {
+  let score = 0;
+  const fa = a.filters || {};
+  const fb = b.filters || {};
+
+  if (a.game === 'TalkMatch') {
+    // Échange linguistique croisé : ma langue cible = sa langue maternelle (et vice versa)
+    if (fa.target && fb.native && fa.target === fb.native) score += 2;
+    if (fa.native && fb.target && fa.native === fb.target) score += 2;
+    return score;
+  }
+
+  for (const key of Object.keys(fa)) {
+    if (fa[key] && fb[key] && fa[key] === fb[key]) score += 1;
+  }
+  return score;
+}
+
+// Matchmaking
+io.on('connection', (socket) => {
+  console.log('Joueur connecté:', socket.id);
+
+  socket.on('find_match', (data) => {
+    // Mode invité : aucun compte requis, un pseudo est généré si besoin
+    socket.username = (data && data.username && data.username.trim()) || `Invité${Math.floor(1000 + Math.random() * 9000)}`;
+    socket.game = (data && data.game) || 'Match';
+    socket.filters = (data && data.filters) || {};
+
+    if (!queue.includes(socket)) queue.push(socket);
+
+    // On cherche le meilleur partenaire compatible déjà en attente sur cet univers
+    const candidates = queue.filter((s) => s !== socket && s.game === socket.game);
+    if (candidates.length > 0) {
+      let best = candidates[0];
+      let bestScore = matchScore(socket, best);
+      for (const c of candidates.slice(1)) {
+        const sc = matchScore(socket, c);
+        if (sc > bestScore) { best = c; bestScore = sc; }
+      }
+
+      queue.splice(queue.indexOf(socket), 1);
+      queue.splice(queue.indexOf(best), 1);
+
+      const room = `room_${socket.id}_${best.id}`;
+      socket.join(room);
+      best.join(room);
+      io.to(room).emit('match_found', {
+        room,
+        players: [socket.username, best.username],
+        playerIds: [socket.id, best.id],
+        game: socket.game,
+        filters: { you: socket.filters, partner: best.filters }
+      });
+    }
+  });
+
+  socket.on('message', (data) => {
+    io.to(data.room).emit('message', {
+      from: socket.username,
+      text: data.text
+    });
+  });
+
+  socket.on('leave_queue', () => {
+    const i = queue.indexOf(socket);
+    if (i > -1) queue.splice(i, 1);
+  });
+
+  // --- Lobby interactif (déplacement par clic + vocal de groupe) ---
+
+  socket.on('lobby_join', (data) => {
+    const universe = (data && data.universe) || 'GGMatch';
+    const username = (data && data.username && data.username.trim()) || `Invité${Math.floor(1000 + Math.random() * 9000)}`;
+    const config = (data && data.config) || null;
+    const equipped = (data && data.equipped) || null;
+
+    leaveLobby(socket);
+
+    const x = 80 + Math.random() * 740;
+    const y = 80 + Math.random() * 320;
+    socket.lobbyUniverse = universe;
+    lobbyPlayers[socket.id] = { universe, username, x, y, inVoice: false, config, equipped };
+    socket.join(lobbyRoomName(universe));
+
+    const others = Object.entries(lobbyPlayers)
+      .filter(([id, p]) => id !== socket.id && p.universe === universe)
+      .map(([id, p]) => ({ id, username: p.username, x: p.x, y: p.y, inVoice: p.inVoice, config: p.config, equipped: p.equipped }));
+
+    socket.emit('lobby_state', { self: { id: socket.id, x, y, username }, players: others });
+    socket.to(lobbyRoomName(universe)).emit('lobby_player_joined', { id: socket.id, username, x, y, inVoice: false, config, equipped });
+  });
+
+  socket.on('lobby_move', (data) => {
+    const p = lobbyPlayers[socket.id];
+    if (!p || !data) return;
+    p.x = data.x;
+    p.y = data.y;
+    socket.to(lobbyRoomName(p.universe)).emit('lobby_player_moved', { id: socket.id, x: p.x, y: p.y });
+  });
+
+  socket.on('lobby_leave', () => leaveLobby(socket));
+
+  // Vocal de groupe (mesh WebRTC) : on annonce sa présence aux autres membres déjà en vocal
+  socket.on('voice_join', () => {
+    const p = lobbyPlayers[socket.id];
+    if (!p) return;
+    const peers = Object.entries(lobbyPlayers)
+      .filter(([id, o]) => id !== socket.id && o.universe === p.universe && o.inVoice)
+      .map(([id]) => id);
+    p.inVoice = true;
+    socket.emit('voice_peers', { peers });
+    socket.to(lobbyRoomName(p.universe)).emit('voice_peer_joined', { id: socket.id });
+  });
+
+  socket.on('voice_leave', () => {
+    const p = lobbyPlayers[socket.id];
+    if (!p) return;
+    p.inVoice = false;
+    socket.to(lobbyRoomName(p.universe)).emit('voice_peer_left', { id: socket.id });
+  });
+
+  // Relais générique de signalisation WebRTC (lobby vocal de groupe + vocal 1v1 en match)
+  socket.on('webrtc_signal', (data) => {
+    if (!data || !data.to) return;
+    io.to(data.to).emit('webrtc_signal', { from: socket.id, data: data.data });
+  });
+
+  socket.on('disconnect', () => {
+    const i = queue.indexOf(socket);
+    if (i > -1) queue.splice(i, 1);
+    leaveLobby(socket);
+  });
+});
+
+function leaveLobby(socket) {
+  const p = lobbyPlayers[socket.id];
+  if (!p) return;
+  socket.to(lobbyRoomName(p.universe)).emit('lobby_player_left', { id: socket.id });
+  socket.leave(lobbyRoomName(p.universe));
+  delete lobbyPlayers[socket.id];
+}
+
+// Abonnements Premium (9€/mois) et Pro (19€/mois) : les price IDs Stripe sont
+// configurés côté serveur via variables d'environnement (jamais exposés au client).
+const SUBSCRIPTION_PRICE_IDS = {
+  premium: process.env.STRIPE_PRICE_PREMIUM,
+  pro: process.env.STRIPE_PRICE_PRO,
+};
+
+app.post('/create-checkout', requireAuth, async (req, res) => {
+  const { plan, priceId: legacyPriceId } = req.body;
+  // Compatibilité : accepte soit un identifiant de plan ('premium'/'pro'), soit
+  // directement un priceId Stripe (ancien format).
+  const priceId = (plan && SUBSCRIPTION_PRICE_IDS[plan]) || legacyPriceId;
+  if (!priceId) {
+    return res.status(400).json({ error: plan ? `Le plan "${plan}" n'est pas configuré (price ID Stripe manquant)` : 'plan ou priceId manquant' });
+  }
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      client_reference_id: req.username,
+      // Le webhook lit ces metadata pour savoir quel plan activer sur le compte
+      // (sans cela, impossible de distinguer un abonné Premium d'un abonné Pro).
+      metadata: { plan: plan || 'premium' },
+      success_url: 'https://ggmatch-production.up.railway.app/?success=true',
+      cancel_url: 'https://ggmatch-production.up.railway.app/?cancelled=true',
+    });
+    res.json({ url: session.url });
+  } catch (e) {
+    console.error('Erreur Stripe:', e.message);
+    res.status(500).json({ error: 'Erreur lors de la création du paiement' });
+  }
+});
+
+// Achat du palier Premium du passe de combat (paiement unique, par univers)
+const BATTLEPASS_PRICE_EUR = 4.99;
+app.post('/create-battlepass-checkout', requireAuth, async (req, res) => {
+  const { universe } = req.body;
+  if (!universe) return res.status(400).json({ error: 'universe manquant' });
+  try {
+    const user = await User.findOne({ username: req.username });
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    // Avantage Pro : le Pass Saison Premium est déjà inclus, pas besoin de payer.
+    if (user.plan === 'pro') {
+      await User.findOneAndUpdate({ username: req.username }, { [`battlePassPremium.${universe}`]: true });
+      return res.json({ free: true, universe });
+    }
+
+    // Avantage Premium : -50% sur le Pass Saison.
+    const discounted = user.plan === 'premium';
+    const priceEur = discounted ? BATTLEPASS_PRICE_EUR / 2 : BATTLEPASS_PRICE_EUR;
+    const productName = discounted
+      ? `Pass Saison Premium — ${universe} (-50% Premium)`
+      : `Pass Saison Premium — ${universe}`;
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          unit_amount: Math.round(priceEur * 100),
+          product_data: { name: productName }
+        },
+        quantity: 1
+      }],
+      client_reference_id: req.username,
+      metadata: { universe },
+      success_url: `https://ggmatch-production.up.railway.app/boutique.html?bp_premium=${encodeURIComponent(universe)}`,
+      cancel_url: 'https://ggmatch-production.up.railway.app/boutique.html?cancelled=true',
+    });
+    res.json({ url: session.url });
+  } catch (e) {
+    console.error('Erreur Stripe (passe de combat):', e.message);
+    res.status(500).json({ error: 'Erreur lors de la création du paiement' });
+  }
+});
+
+// Achat d'un skin VIP à l'unité (paiement unique, en argent réel).
+// Les skins VIP sont des ShopItem avec vip=true et priceEur défini — non disponibles
+// contre des pièces. Une fois payé, l'item est ajouté à l'inventaire via le webhook.
+app.post('/create-vip-skin-checkout', requireAuth, async (req, res) => {
+  const { itemId } = req.body;
+  if (!itemId) return res.status(400).json({ error: 'itemId manquant' });
+  try {
+    const item = await ShopItem.findById(itemId);
+    if (!item || !item.vip || !item.priceEur) {
+      return res.status(404).json({ error: 'Skin VIP introuvable' });
+    }
+    const user = await User.findOne({ username: req.username });
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    if ((user.inventory || []).includes(String(item._id))) {
+      return res.json({ owned: true });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          unit_amount: Math.round(item.priceEur * 100),
+          product_data: {
+            name: `Skin VIP — ${item.name}`,
+            description: item.description || undefined
+          }
+        },
+        quantity: 1
+      }],
+      client_reference_id: req.username,
+      metadata: { vipItemId: String(item._id) },
+      success_url: `https://ggmatch-production.up.railway.app/boutique.html?vip_skin=${encodeURIComponent(String(item._id))}`,
+      cancel_url: 'https://ggmatch-production.up.railway.app/boutique.html?cancelled=true',
+    });
+    res.json({ url: session.url });
+  } catch (e) {
+    console.error('Erreur Stripe (skin VIP):', e.message);
+    res.status(500).json({ error: 'Erreur lors de la création du paiement' });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`GGMatch tourne sur http://localhost:${PORT}`);
+});
