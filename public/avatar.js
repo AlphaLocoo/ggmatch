@@ -7,6 +7,7 @@
   const KEY_INVENTORY = 'ggmatch_inventory';
   const KEY_EQUIPPED = 'ggmatch_equipped';
   const KEY_LAST_CLAIM = 'ggmatch_last_claim';
+  const TOKEN_KEY = 'ggmatch_token';
 
   const DEFAULT_CONFIG = {
     skinTone: '#f2c9a0',
@@ -37,6 +38,58 @@
     localStorage.setItem(key, JSON.stringify(value));
   }
 
+  // --- Synchronisation avec le compte (si connecté) ---
+
+  function getToken() {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  // Envoie l'état local complet (pièces, avatar, inventaire, passe de combat) vers le serveur.
+  function pushProfile() {
+    const token = getToken();
+    if (!token) return Promise.resolve();
+    return fetch('/api/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        coins: getCoins(),
+        avatarConfig: getConfig(),
+        inventory: getInventory(),
+        equipped: getEquipped(),
+        battlePassXP: read(KEY_BP_XP, {}),
+        battlePassPremium: read(KEY_BP_PREMIUM, {}),
+        battlePassClaimed: read(KEY_BP_CLAIMED, {})
+      })
+    }).catch(() => {});
+  }
+
+  // Récupère le profil serveur après connexion : si le compte a déjà une progression,
+  // elle remplace les données locales (invité) ; sinon la progression locale est envoyée au compte.
+  function syncProfile() {
+    const token = getToken();
+    if (!token) return Promise.resolve();
+    return fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then((res) => res.ok ? res.json() : null)
+      .then((profile) => {
+        if (!profile) return;
+        const hasServerData = (profile.inventory && profile.inventory.length > 0)
+          || (profile.avatarConfig && Object.keys(profile.avatarConfig).length > 0)
+          || (typeof profile.coins === 'number' && profile.coins !== 300);
+        if (hasServerData) {
+          write(KEY_CONFIG, profile.avatarConfig || {});
+          write(KEY_COINS, typeof profile.coins === 'number' ? profile.coins : getCoins());
+          write(KEY_INVENTORY, profile.inventory || []);
+          write(KEY_EQUIPPED, profile.equipped || {});
+          write(KEY_BP_XP, profile.battlePassXP || {});
+          write(KEY_BP_PREMIUM, profile.battlePassPremium || {});
+          write(KEY_BP_CLAIMED, profile.battlePassClaimed || {});
+        } else {
+          return pushProfile();
+        }
+      })
+      .catch(() => {});
+  }
+
   function getConfig() {
     return Object.assign({}, DEFAULT_CONFIG, read(KEY_CONFIG, {}));
   }
@@ -45,6 +98,7 @@
     const current = getConfig();
     const next = Object.assign({}, current, partial);
     write(KEY_CONFIG, next);
+    pushProfile();
     return next;
   }
 
@@ -60,6 +114,7 @@
   function addCoins(amount) {
     const total = getCoins() + amount;
     write(KEY_COINS, total);
+    pushProfile();
     return total;
   }
 
@@ -67,6 +122,7 @@
     const total = getCoins();
     if (total < amount) return false;
     write(KEY_COINS, total - amount);
+    pushProfile();
     return true;
   }
 
@@ -94,6 +150,7 @@
     if (!spendCoins(item.price)) return false;
     inv.push(item._id);
     write(KEY_INVENTORY, inv);
+    pushProfile();
     return true;
   }
 
@@ -111,6 +168,7 @@
       eq.hairstyle = (eq.hairstyle && eq.hairstyle._id === item._id) ? null : item;
     }
     write(KEY_EQUIPPED, eq);
+    pushProfile();
     return eq;
   }
 
@@ -203,6 +261,7 @@
     const all = read(KEY_BP_XP, {});
     all[universe] = (all[universe] || 0) + amount;
     write(KEY_BP_XP, all);
+    pushProfile();
     return all[universe];
   }
 
@@ -225,6 +284,7 @@
     const all = read(KEY_BP_PREMIUM, {});
     all[universe] = true;
     write(KEY_BP_PREMIUM, all);
+    pushProfile();
   }
 
   function getClaimedRewards(universe) {
@@ -240,6 +300,7 @@
     all[universe] = entry;
     write(KEY_BP_CLAIMED, all);
     if (coins) addCoins(coins);
+    pushProfile();
     return true;
   }
 
@@ -268,6 +329,8 @@
     hasPremiumPass,
     setPremiumPass,
     getClaimedRewards,
-    claimBattlePassReward
+    claimBattlePassReward,
+    syncProfile,
+    pushProfile
   };
 })();

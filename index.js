@@ -13,6 +13,7 @@ mongoose.connect(process.env.MONGODB_URI)
     seedEvents();
     seedShopItems();
     seedBattlePass();
+    seedFeaturedTournaments();
   })
   .catch((err) => console.error('Erreur connexion MongoDB:', err.message));
 
@@ -208,12 +209,50 @@ async function seedBattlePass() {
   }
 }
 
+// Grands tournois "Saison 1" — un par univers, avec cash prize, premier rendez-vous le 1er janvier 2027.
+// Upsert par (universe, title) : peut être ajouté sans dupliquer même si la base existe déjà.
+async function seedFeaturedTournaments() {
+  try {
+    const launchDate = new Date('2027-01-01T18:00:00+01:00');
+    const seed = [
+      { universe: 'GGMatch', type: 'tournoi', title: 'Grand Tournoi GGMatch — Saison 1', description: 'Le premier grand tournoi officiel GGMatch, ouvert à tous les niveaux. Inscriptions bientôt disponibles.', date: launchDate, format: 'Bracket multi-jeux · Élimination directe', prize: '1 000€ de cash prize', host: 'Équipe GGMatch', link: '/?univers=GGMatch#jouer', featured: true },
+      { universe: 'BeatMatch', type: 'tournoi', title: 'Grand Battle BeatMatch — Saison 1', description: 'La première grande battle officielle BeatMatch, tous styles musicaux confondus.', date: launchDate, format: 'Battle · Votes communautaires', prize: '500€ de cash prize', host: 'Équipe BeatMatch', link: '/?univers=BeatMatch#jouer', featured: true },
+      { universe: 'StudyMatch', type: 'tournoi', title: 'Grand Tournoi StudyMatch — Saison 1', description: 'Le premier grand tournoi de quiz et révisions par équipes StudyMatch.', date: launchDate, format: 'Duo · Quiz chronométré', prize: '500€ de cash prize', host: 'Équipe StudyMatch', link: '/?univers=StudyMatch#jouer', featured: true },
+      { universe: 'TalkMatch', type: 'tournoi', title: 'Grand Tournoi TalkMatch — Saison 1', description: 'Le premier grand échange linguistique multi-langues TalkMatch, avec classement et récompenses.', date: launchDate, format: 'Speed exchange · Multi-langues', prize: '500€ de cash prize', host: 'Équipe TalkMatch', link: '/?univers=TalkMatch#jouer', featured: true },
+      { universe: 'GymMatch', type: 'tournoi', title: 'Grand Challenge GymMatch — Saison 1', description: 'Le premier grand challenge fitness collectif GymMatch, classement en temps réel.', date: launchDate, format: 'Challenge collectif · Classement', prize: '500€ de cash prize', host: 'Équipe GymMatch', link: '/?univers=GymMatch#jouer', featured: true },
+      { universe: 'CreateMatch', type: 'tournoi', title: 'Grand Concours CreateMatch — Saison 1', description: 'Le premier grand concours créatif CreateMatch, votes communautaires et mise en avant des gagnants.', date: launchDate, format: 'Concours créatif · Votes communautaires', prize: '500€ de cash prize', host: 'Équipe CreateMatch', link: '/?univers=CreateMatch#jouer', featured: true },
+    ];
+
+    let inserted = 0;
+    for (const ev of seed) {
+      const result = await Event.updateOne(
+        { universe: ev.universe, title: ev.title },
+        { $setOnInsert: ev },
+        { upsert: true }
+      );
+      if (result.upsertedCount > 0) inserted++;
+    }
+    if (inserted > 0) console.log(`${inserted} grands tournois Saison 1 ajoutés.`);
+  } catch (e) {
+    console.error('Erreur seed grands tournois:', e.message);
+  }
+}
+
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
   games: [String],
-  plan: { type: String, default: 'free' }
-});
+  plan: { type: String, default: 'free' },
+  coins: { type: Number, default: 300 },
+  avatarConfig: { type: mongoose.Schema.Types.Mixed, default: {} },
+  inventory: { type: [String], default: [] },
+  equipped: { type: mongoose.Schema.Types.Mixed, default: {} },
+  battlePassXP: { type: mongoose.Schema.Types.Mixed, default: {} },
+  battlePassPremium: { type: mongoose.Schema.Types.Mixed, default: {} },
+  battlePassClaimed: { type: mongoose.Schema.Types.Mixed, default: {} },
+  matchHistory: [{ universe: String, partner: String, date: { type: Date, default: Date.now } }],
+  stripeCustomerId: String
+}, { timestamps: true });
 const User = mongoose.model('User', UserSchema);
 
 // Tournois & Lives par univers
@@ -227,7 +266,8 @@ const EventSchema = new mongoose.Schema({
   prize: String,
   host: String,
   link: String,
-  status: { type: String, enum: ['upcoming', 'live', 'ended'], default: 'upcoming' }
+  status: { type: String, enum: ['upcoming', 'live', 'ended'], default: 'upcoming' },
+  featured: { type: Boolean, default: false }
 }, { timestamps: true });
 const Event = mongoose.model('Event', EventSchema);
 
@@ -270,6 +310,39 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
+// Webhook Stripe — déclaré avant express.json() car Stripe exige le corps brut pour vérifier la signature
+app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (e) {
+    console.error('Webhook Stripe invalide:', e.message);
+    return res.status(400).send(`Webhook Error: ${e.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const username = session.client_reference_id;
+    if (username) {
+      try {
+        if (session.mode === 'subscription') {
+          await User.findOneAndUpdate({ username }, { plan: 'pro' });
+          console.log(`Abonnement Pro activé pour ${username}`);
+        } else if (session.mode === 'payment' && session.metadata && session.metadata.universe) {
+          const universe = session.metadata.universe;
+          await User.findOneAndUpdate({ username }, { [`battlePassPremium.${universe}`]: true });
+          console.log(`Passe premium ${universe} activé pour ${username}`);
+        }
+      } catch (e) {
+        console.error('Erreur mise à jour utilisateur après paiement:', e.message);
+      }
+    }
+  }
+
+  res.json({ received: true });
+});
+
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -290,13 +363,28 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// Authentification par token (compte utilisateur)
+function requireAuth(req, res, next) {
+  const header = req.headers['authorization'] || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Non authentifié' });
+  try {
+    const payload = jwt.verify(token, process.env.SECRET || 'ggmatch_secret');
+    req.username = payload.username;
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Session expirée, reconnecte-toi' });
+  }
+}
+
 // Tournois & Lives — lecture publique
 app.get('/api/events', async (req, res) => {
   try {
-    const { universe, type } = req.query;
+    const { universe, type, featured } = req.query;
     const filter = {};
     if (universe) filter.universe = universe;
     if (type) filter.type = type;
+    if (featured !== undefined) filter.featured = (featured === 'true');
     if (!req.headers['x-admin-key']) filter.status = { $ne: 'ended' };
     const events = await Event.find(filter).sort({ date: 1 }).limit(50);
     res.json(events);
@@ -441,9 +529,52 @@ app.post('/login', async (req, res) => {
     if (!user) return res.status(400).json({ error: 'Utilisateur introuvable' });
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(400).json({ error: 'Mauvais mot de passe' });
-    const token = jwt.sign({ username }, process.env.SECRET || 'ggmatch_secret');
+    const token = jwt.sign({ username }, process.env.SECRET || 'ggmatch_secret', { expiresIn: '30d' });
     res.json({ token, username });
   } catch(e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Profil complet du joueur connecté (pièces, avatar, inventaire, passe de combat, historique)
+app.get('/api/me', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findOne({ username: req.username }).select('-password');
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    res.json(user);
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Mise à jour partielle du profil (synchronisation avec le client)
+app.put('/api/profile', requireAuth, async (req, res) => {
+  try {
+    const allowed = ['coins', 'avatarConfig', 'inventory', 'equipped', 'battlePassXP', 'battlePassPremium', 'battlePassClaimed'];
+    const update = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) update[key] = req.body[key];
+    }
+    const user = await User.findOneAndUpdate({ username: req.username }, update, { new: true, upsert: false }).select('-password');
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    res.json(user);
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Ajoute une partie à l'historique du joueur (50 dernières conservées)
+app.post('/api/profile/match', requireAuth, async (req, res) => {
+  try {
+    const { universe, partner } = req.body;
+    const user = await User.findOneAndUpdate(
+      { username: req.username },
+      { $push: { matchHistory: { $each: [{ universe, partner, date: new Date() }], $slice: -50 } } },
+      { new: true }
+    ).select('-password');
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    res.json(user);
+  } catch (e) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -592,7 +723,7 @@ function leaveLobby(socket) {
   delete lobbyPlayers[socket.id];
 }
 
-app.post('/create-checkout', async (req, res) => {
+app.post('/create-checkout', requireAuth, async (req, res) => {
   const { priceId } = req.body;
   if (!priceId) return res.status(400).json({ error: 'priceId manquant' });
   try {
@@ -600,6 +731,7 @@ app.post('/create-checkout', async (req, res) => {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
+      client_reference_id: req.username,
       success_url: 'https://ggmatch-production.up.railway.app/?success=true',
       cancel_url: 'https://ggmatch-production.up.railway.app/?cancelled=true',
     });
@@ -612,7 +744,7 @@ app.post('/create-checkout', async (req, res) => {
 
 // Achat du palier Premium du passe de combat (paiement unique, par univers)
 const BATTLEPASS_PRICE_EUR = 4.99;
-app.post('/create-battlepass-checkout', async (req, res) => {
+app.post('/create-battlepass-checkout', requireAuth, async (req, res) => {
   const { universe } = req.body;
   if (!universe) return res.status(400).json({ error: 'universe manquant' });
   try {
@@ -627,6 +759,8 @@ app.post('/create-battlepass-checkout', async (req, res) => {
         },
         quantity: 1
       }],
+      client_reference_id: req.username,
+      metadata: { universe },
       success_url: `https://ggmatch-production.up.railway.app/boutique.html?bp_premium=${encodeURIComponent(universe)}`,
       cancel_url: 'https://ggmatch-production.up.railway.app/boutique.html?cancelled=true',
     });
