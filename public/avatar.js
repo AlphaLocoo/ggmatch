@@ -7,7 +7,15 @@
   const KEY_INVENTORY = 'ggmatch_inventory';
   const KEY_EQUIPPED = 'ggmatch_equipped';
   const KEY_LAST_CLAIM = 'ggmatch_last_claim';
+  const KEY_PLAN = 'ggmatch_plan';
   const TOKEN_KEY = 'ggmatch_token';
+
+  // Badges cosmétiques offerts automatiquement avec les abonnements Premium/Pro
+  // (équipés dans le slot "badge" de l'avatar, visibles partout y compris en lobby).
+  const PLAN_BADGES = {
+    premium: { _id: 'badge_premium', type: 'accessory', slot: 'badge', name: 'Badge Premium', icon: '👑' },
+    pro: { _id: 'badge_pro', type: 'accessory', slot: 'badge', name: 'Badge Pro', icon: '💎' }
+  };
 
   const DEFAULT_CONFIG = {
     skinTone: '#f2c9a0',
@@ -63,6 +71,31 @@
     }).catch(() => {});
   }
 
+  function getPlan() {
+    return read(KEY_PLAN, 'free');
+  }
+
+  // Équipe/retire automatiquement le badge cosmétique correspondant au plan
+  // d'abonnement (👑 Premium / 💎 Pro), visible sur l'avatar partout (boutique, lobby).
+  function applyPlanBadge(plan) {
+    const eq = getEquipped();
+    const badge = PLAN_BADGES[plan];
+    const current = eq.accessories.badge;
+    const isPlanBadge = current && (current._id === 'badge_premium' || current._id === 'badge_pro');
+    let changed = false;
+    if (badge && (!current || current._id !== badge._id)) {
+      eq.accessories.badge = badge;
+      changed = true;
+    } else if (!badge && isPlanBadge) {
+      delete eq.accessories.badge;
+      changed = true;
+    }
+    if (changed) {
+      write(KEY_EQUIPPED, eq);
+      pushProfile();
+    }
+  }
+
   // Récupère le profil serveur après connexion : si le compte a déjà une progression,
   // elle remplace les données locales (invité) ; sinon la progression locale est envoyée au compte.
   function syncProfile() {
@@ -72,9 +105,11 @@
       .then((res) => res.ok ? res.json() : null)
       .then((profile) => {
         if (!profile) return;
+        write(KEY_PLAN, profile.plan || 'free');
         const hasServerData = (profile.inventory && profile.inventory.length > 0)
           || (profile.avatarConfig && Object.keys(profile.avatarConfig).length > 0)
           || (typeof profile.coins === 'number' && profile.coins !== 300);
+        let result;
         if (hasServerData) {
           write(KEY_CONFIG, profile.avatarConfig || {});
           write(KEY_COINS, typeof profile.coins === 'number' ? profile.coins : getCoins());
@@ -84,8 +119,15 @@
           write(KEY_BP_PREMIUM, profile.battlePassPremium || {});
           write(KEY_BP_CLAIMED, profile.battlePassClaimed || {});
         } else {
-          return pushProfile();
+          result = pushProfile();
         }
+        // Avantage Pro : le Pass Saison Premium est inclus sur tous les univers, même
+        // pour un compte qui n'a pas encore de progression locale ("hasServerData" faux).
+        if (profile.plan === 'pro' && profile.battlePassPremium) {
+          write(KEY_BP_PREMIUM, profile.battlePassPremium);
+        }
+        applyPlanBadge(profile.plan);
+        return result;
       })
       .catch(() => {});
   }
@@ -154,14 +196,35 @@
     return true;
   }
 
+  // Les accessoires sont stockés par "slot" (casque, lunettes, trophée, ...) afin
+  // de pouvoir en équiper plusieurs simultanément (ex: casque + couronne).
   function getEquipped() {
-    return Object.assign({ accessory: null, outfit: null, hairstyle: null }, read(KEY_EQUIPPED, {}));
+    const raw = read(KEY_EQUIPPED, {});
+    const equipped = Object.assign({ accessories: {}, outfit: null, hairstyle: null }, raw);
+    if (!equipped.accessories) equipped.accessories = {};
+    // Migration depuis l'ancien format à accessoire unique (eq.accessory)
+    if (raw.accessory && Object.keys(equipped.accessories).length === 0) {
+      const slot = raw.accessory.slot || raw.accessory._id;
+      equipped.accessories[slot] = raw.accessory;
+    }
+    delete equipped.accessory;
+    return equipped;
+  }
+
+  function isAccessoryEquipped(itemId) {
+    const eq = getEquipped();
+    return Object.values(eq.accessories).some((it) => it && it._id === itemId);
   }
 
   function equipItem(item) {
     const eq = getEquipped();
     if (item.type === 'accessory') {
-      eq.accessory = (eq.accessory && eq.accessory._id === item._id) ? null : item;
+      const slot = item.slot || item._id;
+      if (eq.accessories[slot] && eq.accessories[slot]._id === item._id) {
+        delete eq.accessories[slot];
+      } else {
+        eq.accessories[slot] = item;
+      }
     } else if (item.type === 'outfit') {
       eq.outfit = (eq.outfit && eq.outfit._id === item._id) ? null : item;
     } else if (item.type === 'hairstyle') {
@@ -215,122 +278,29 @@
     }
   }
 
-  function renderAvatarSVG(config, equipped) {
-    config = config || getConfig();
-    equipped = equipped || getEquipped();
-    const outfitColor = (equipped.outfit && equipped.outfit.color) || config.outfitColor;
-    const accessoryIcon = equipped.accessory ? equipped.accessory.icon : null;
-    const hairStyle = (equipped.hairstyle && equipped.hairstyle.value) || config.hairStyle;
-    const hairColor = (equipped.hairstyle && equipped.hairstyle.color) || config.hairColor;
-
-    return `
-<svg viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg" class="avatar-svg">
-  <ellipse cx="100" cy="232" rx="55" ry="8" fill="rgba(0,0,0,0.12)"/>
-  <path d="M40 240 C 40 175, 60 150, 100 150 C 140 150, 160 175, 160 240 Z" fill="${outfitColor}"/>
-  <circle cx="100" cy="80" r="48" fill="${config.skinTone}"/>
-  ${eyesMarkup(config.eyes)}
-  <path d="M85 112 Q 100 122 115 112" stroke="#7a4a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
-  ${hairPath(hairStyle, hairColor)}
-  ${accessoryIcon ? `<text x="100" y="48" font-size="34" text-anchor="middle">${accessoryIcon}</text>` : ''}
-</svg>`;
-  }
-
-  function mountAvatar(target, config, equipped) {
-    const el = typeof target === 'string' ? document.getElementById(target) : target;
-    if (!el) return;
-    el.innerHTML = renderAvatarSVG(config, equipped);
-  }
-
-  // --- Passe de combat (par univers) ---
-
-  const KEY_BP_XP = 'ggmatch_bp_xp'; // { universe: xp }
-  const KEY_BP_PREMIUM = 'ggmatch_bp_premium'; // { universe: bool }
-  const KEY_BP_CLAIMED = 'ggmatch_bp_claimed'; // { universe: { free: [tiers], premium: [tiers] } }
-  const KEY_BP_LAST_DAILY = 'ggmatch_bp_last_daily';
-
-  const BP_UNIVERSES = ['GGMatch', 'BeatMatch', 'StudyMatch', 'TalkMatch', 'GymMatch', 'CreateMatch'];
-  const BP_DAILY_XP = 15;
-  const BP_MATCH_XP = 25;
-
-  function getBattlePassXP(universe) {
-    const all = read(KEY_BP_XP, {});
-    return all[universe] || 0;
-  }
-
-  function addBattlePassXP(universe, amount) {
-    const all = read(KEY_BP_XP, {});
-    all[universe] = (all[universe] || 0) + amount;
-    write(KEY_BP_XP, all);
-    pushProfile();
-    return all[universe];
-  }
-
-  // Bonus quotidien d'XP pour tous les passes de combat (une fois par jour)
-  function claimDailyBattlePassXP() {
-    const today = new Date().toISOString().slice(0, 10);
-    const last = localStorage.getItem(KEY_BP_LAST_DAILY);
-    if (last === today) return 0;
-    localStorage.setItem(KEY_BP_LAST_DAILY, today);
-    BP_UNIVERSES.forEach((u) => addBattlePassXP(u, BP_DAILY_XP));
-    return BP_DAILY_XP;
-  }
-
-  function hasPremiumPass(universe) {
-    const all = read(KEY_BP_PREMIUM, {});
-    return !!all[universe];
-  }
-
-  function setPremiumPass(universe) {
-    const all = read(KEY_BP_PREMIUM, {});
-    all[universe] = true;
-    write(KEY_BP_PREMIUM, all);
-    pushProfile();
-  }
-
-  function getClaimedRewards(universe) {
-    const all = read(KEY_BP_CLAIMED, {});
-    return all[universe] || { free: [], premium: [] };
-  }
-
-  function claimBattlePassReward(universe, tier, track, coins) {
-    const all = read(KEY_BP_CLAIMED, {});
-    const entry = all[universe] || { free: [], premium: [] };
-    if (entry[track].includes(tier)) return false;
-    entry[track].push(tier);
-    all[universe] = entry;
-    write(KEY_BP_CLAIMED, all);
-    if (coins) addCoins(coins);
-    pushProfile();
-    return true;
-  }
-
-  window.GGAvatar = {
-    PALETTES,
-    DEFAULT_CONFIG,
-    getConfig,
-    saveConfig,
-    getCoins,
-    addCoins,
-    spendCoins,
-    claimDailyCoins,
-    getInventory,
-    ownsItem,
-    unlockItem,
-    getEquipped,
-    equipItem,
-    renderAvatarSVG,
-    mountAvatar,
-    BP_UNIVERSES,
-    BP_DAILY_XP,
-    BP_MATCH_XP,
-    getBattlePassXP,
-    addBattlePassXP,
-    claimDailyBattlePassXP,
-    hasPremiumPass,
-    setPremiumPass,
-    getClaimedRewards,
-    claimBattlePassReward,
-    syncProfile,
-    pushProfile
+  // Position des accessoires en fonction de leur TYPE (slot) plutôt que de
+  // l'ordre dans lequel ils ont été équipés. Chaque slot d'objet appartient à
+  // une catégorie (tête, visage, main, buste) qui détermine où il s'affiche
+  // sur l'avatar, avec plusieurs emplacements disponibles par catégorie pour
+  // éviter les superpositions quand plusieurs objets de la même catégorie
+  // sont équipés en même temps.
+  const SLOT_CATEGORY = {
+    // Tête (au-dessus / sur la tête)
+    crown: 'head', headset: 'head', headphones: 'head', 'dj-cap': 'head',
+    'grad-cap': 'head', headband: 'head', beret: 'head', 'translate-headset': 'head',
+    // Visage
+    glasses: 'face', 'glasses-creative': 'face',
+    // Mains / objets tenus
+    controller: 'hand', mic: 'hand', guitar: 'hand', 'mic-vintage': 'hand',
+    dumbbell: 'hand', palette: 'hand', brush: 'hand', camera: 'hand',
+    'camera-art': 'hand', calculator: 'hand', vinyl: 'hand', book: 'hand',
+    globe: 'hand', bottle: 'hand', smartwatch: 'hand',
+    // Buste / accessoires décoratifs
+    badge: 'chest', trophy: 'chest', medal: 'chest', flags: 'chest',
+    passport: 'chest', coffee: 'chest'
   };
-})();
+
+  const CATEGORY_POSITIONS = {
+    head:  [{ x: 100, y: 46, size: 34 }],
+    face:  [{ x: 100, y: 88, size: 26 }],
+    hand: 

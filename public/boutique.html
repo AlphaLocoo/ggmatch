@@ -128,6 +128,25 @@
     CreateMatch: { label: 'CreateMatch — Créatif', emoji: '🎨' }
   };
 
+  // Notification non bloquante (remplace alert())
+  function showToast(message) {
+    let container = document.querySelector('.gg-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'gg-toast-container';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'gg-toast';
+    toast.textContent = message;
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
   function refreshAvatar() {
     GGAvatar.mountAvatar('avatar-preview', GGAvatar.getConfig(), GGAvatar.getEquipped());
   }
@@ -142,7 +161,11 @@
     const parts = [];
     if (eq.outfit) parts.push(`<span class="equipped-chip">${eq.outfit.icon || '👕'} ${eq.outfit.name}</span>`);
     if (eq.hairstyle) parts.push(`<span class="equipped-chip">${eq.hairstyle.icon || '💇'} ${eq.hairstyle.name}</span>`);
-    if (eq.accessory) parts.push(`<span class="equipped-chip">${eq.accessory.icon || '✨'} ${eq.accessory.name}</span>`);
+    if (eq.accessories) {
+      Object.values(eq.accessories).forEach((acc) => {
+        if (acc) parts.push(`<span class="equipped-chip">${acc.icon || '✨'} ${acc.name}</span>`);
+      });
+    }
     row.innerHTML = parts.length ? parts.join('') : '<span class="equipped-chip equipped-empty">Aucun objet équipé</span>';
   }
 
@@ -193,12 +216,14 @@
   function itemCardHTML(item) {
     const owned = GGAvatar.ownsItem(item._id);
     const eq = GGAvatar.getEquipped();
-    const equipped = (item.type === 'accessory' && eq.accessory && eq.accessory._id === item._id)
+    const equipped = (item.type === 'accessory' && GGAvatar.isAccessoryEquipped(item._id))
       || (item.type === 'outfit' && eq.outfit && eq.outfit._id === item._id)
       || (item.type === 'hairstyle' && eq.hairstyle && eq.hairstyle._id === item._id);
 
     let actionHTML;
-    if (!owned) {
+    if (!owned && item.vip) {
+      actionHTML = `<button class="item-btn item-buy-vip" data-id="${item._id}">👑 Débloquer · ${item.priceEur.toFixed(2).replace('.', ',')} €</button>`;
+    } else if (!owned) {
       actionHTML = `<button class="item-btn item-buy" data-id="${item._id}">Débloquer · ${item.price} 🪙</button>`;
     } else if (equipped) {
       actionHTML = `<button class="item-btn item-equipped" data-id="${item._id}">Équipé ✓</button>`;
@@ -211,7 +236,8 @@
       : `<div class="item-visual" style="background:${item.color || '#ddd'}"></div>`;
 
     return `
-      <div class="shop-item ${owned ? 'owned' : ''}" data-id="${item._id}">
+      <div class="shop-item ${owned ? 'owned' : ''} ${item.vip ? 'vip' : ''}" data-id="${item._id}">
+        ${item.vip ? '<div class="item-vip-badge">👑 VIP</div>' : ''}
         ${visual}
         <div class="item-name">${item.name}</div>
         <div class="item-desc">${item.description || ''}</div>
@@ -225,12 +251,48 @@
         const item = items.find(i => i._id === btn.dataset.id);
         if (!item) return;
         if (GGAvatar.getCoins() < item.price) {
-          alert('Pas assez de pièces ! Reviens demain pour ton bonus quotidien.');
+          showToast('Pas assez de pièces ! Reviens demain pour ton bonus quotidien.');
           return;
         }
         if (GGAvatar.unlockItem(item)) {
           refreshCoins();
           renderCatalog(items.allItems || items);
+        }
+      });
+    });
+    document.querySelectorAll('.item-buy-vip').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!window.GGAuth || !GGAuth.isLoggedIn()) {
+          if (window.GGAuth) GGAuth.openModal();
+          return;
+        }
+        const item = items.find(i => i._id === btn.dataset.id);
+        if (!item) return;
+        btn.disabled = true;
+        const originalLabel = btn.textContent;
+        btn.textContent = 'Redirection…';
+        try {
+          const res = await fetch('/create-vip-skin-checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GGAuth.getToken() },
+            body: JSON.stringify({ itemId: item._id })
+          });
+          const data = await res.json();
+          if (data.url) {
+            window.location.href = data.url;
+          } else if (data.owned) {
+            showToast('Tu possèdes déjà ce skin VIP !');
+            if (GGAvatar.syncProfile) await GGAvatar.syncProfile();
+            renderCatalog(items.allItems || items);
+          } else if (data.error) {
+            showToast(data.error);
+            btn.disabled = false;
+            btn.textContent = originalLabel;
+          }
+        } catch (e) {
+          showToast('Impossible de lancer le paiement pour le moment.');
+          btn.disabled = false;
+          btn.textContent = originalLabel;
         }
       });
     });
@@ -290,7 +352,7 @@
     if (gained > 0) {
       refreshCoins();
     } else {
-      alert('Tu as déjà récupéré ton bonus aujourd\'hui. Reviens demain !');
+      showToast('Tu as déjà récupéré ton bonus aujourd\'hui. Reviens demain !');
     }
   });
 
@@ -330,20 +392,38 @@
       ctaEl.innerHTML = `<div class="bp-premium-text">✓ Passe <strong>Premium</strong> actif pour cet univers</div>`;
     } else {
       ctaEl.className = 'bp-premium-cta';
+      // -50% pour les abonnés Premium (le Pass Saison est inclus gratuitement pour les Pro,
+      // qui ne voient jamais ce CTA car `premium` est déjà vrai pour eux).
+      const plan = window.GGAvatar.getPlan ? window.GGAvatar.getPlan() : 'free';
+      const priceLabel = plan === 'premium' ? '2,50 € (-50% Premium)' : '4,99 €';
       ctaEl.innerHTML = `
-        <div class="bp-premium-text">Débloque la voie <strong>Premium</strong> et double tes récompenses sur ce passe — 4,99 €</div>
+        <div class="bp-premium-text">Débloque la voie <strong>Premium</strong> et double tes récompenses sur ce passe — ${priceLabel}</div>
         <button class="bp-premium-btn" id="bp-premium-btn">Débloquer Premium</button>`;
       document.getElementById('bp-premium-btn').addEventListener('click', async () => {
+        if (!window.GGAuth || !GGAuth.isLoggedIn()) {
+          if (window.GGAuth) GGAuth.openModal();
+          return;
+        }
         try {
           const res = await fetch('/create-battlepass-checkout', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GGAuth.getToken() },
             body: JSON.stringify({ universe: bpUniverse })
           });
           const data = await res.json();
-          if (data.url) window.location.href = data.url;
+          if (data.free) {
+            // Avantage Pro : pass premium débloqué directement, sans paiement.
+            GGAvatar.setPremiumPass(bpUniverse);
+            showToast('Pass Saison Premium inclus avec ton abonnement Pro 🎉');
+            renderBattlePass();
+            refreshAvatar();
+          } else if (data.url) {
+            window.location.href = data.url;
+          } else if (data.error) {
+            showToast(data.error);
+          }
         } catch (e) {
-          alert('Impossible de lancer le paiement pour le moment.');
+          showToast('Impossible de lancer le paiement pour le moment.');
         }
       });
     }
@@ -354,89 +434,4 @@
       const freeClaimed = claimed.free.includes(t.tier);
       const premiumClaimed = claimed.premium.includes(t.tier);
 
-      let freeBtnClass = 'bp-locked', freeBtnLabel = 'Verrouillé';
-      if (freeClaimed) { freeBtnClass = 'bp-claimed'; freeBtnLabel = 'Récupéré ✓'; }
-      else if (reached) { freeBtnClass = 'bp-claimable'; freeBtnLabel = 'Récupérer'; }
-
-      let premBtnClass = 'bp-locked', premBtnLabel = 'Verrouillé';
-      if (!premium) { premBtnClass = 'bp-premium-locked'; premBtnLabel = 'Premium requis'; }
-      else if (premiumClaimed) { premBtnClass = 'bp-claimed'; premBtnLabel = 'Récupéré ✓'; }
-      else if (reached) { premBtnClass = 'bp-claimable'; premBtnLabel = 'Récupérer'; }
-
-      return `
-        <div class="bp-tier ${reached ? 'bp-reached' : ''}">
-          <div class="bp-tier-num">Palier ${t.tier} · ${t.xpRequired} XP</div>
-          <div class="bp-tier-reward">
-            <div class="bp-reward-icon">${t.freeReward.icon}</div>
-            <div class="bp-reward-label">${t.freeReward.label}</div>
-            <button class="bp-claim-btn ${freeBtnClass}" data-track="free" data-tier="${t.tier}" data-coins="${t.freeReward.coins}" ${freeBtnClass !== 'bp-claimable' ? 'disabled' : ''}>${freeBtnLabel}</button>
-          </div>
-          <div class="bp-tier-reward bp-premium-row">
-            <div class="bp-reward-icon">${t.premiumReward.icon}</div>
-            <div class="bp-reward-label">${t.premiumReward.label}</div>
-            <button class="bp-claim-btn ${premBtnClass}" data-track="premium" data-tier="${t.tier}" data-coins="${t.premiumReward.coins}" ${premBtnClass !== 'bp-claimable' ? 'disabled' : ''}>${premBtnLabel}</button>
-          </div>
-        </div>`;
-    }).join('');
-
-    document.querySelectorAll('.bp-tab').forEach(btn => {
-      btn.addEventListener('click', () => {
-        bpUniverse = btn.dataset.universe;
-        renderBattlePass();
-      });
-    });
-
-    document.querySelectorAll('.bp-claim-btn.bp-claimable').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const track = btn.dataset.track;
-        const tier = parseInt(btn.dataset.tier, 10);
-        const coins = parseInt(btn.dataset.coins, 10);
-        if (GGAvatar.claimBattlePassReward(bpUniverse, tier, track, coins)) {
-          refreshCoins();
-          renderBattlePass();
-        }
-      });
-    });
-  }
-
-  async function loadBattlePass() {
-    try {
-      const res = await fetch('/api/battlepass');
-      bpTiers = await res.json();
-      renderBattlePass();
-    } catch (e) {
-      // silencieux : la boutique reste utilisable même sans passe de combat
-    }
-  }
-
-  document.getElementById('bp-daily-btn').addEventListener('click', () => {
-    const gained = GGAvatar.claimDailyBattlePassXP();
-    if (gained > 0) {
-      renderBattlePass();
-    } else {
-      alert('Tu as déjà récupéré ton bonus d\'XP aujourd\'hui. Reviens demain !');
-    }
-  });
-
-  // Retour de paiement Stripe : ?bp_premium=<universe>
-  (function handlePremiumReturn() {
-    const params = new URLSearchParams(window.location.search);
-    const universe = params.get('bp_premium');
-    if (universe && GGAvatar.BP_UNIVERSES.includes(universe)) {
-      GGAvatar.setPremiumPass(universe);
-      bpUniverse = universe;
-      window.history.replaceState({}, '', 'boutique.html');
-    }
-  })();
-
-  refreshAvatar();
-  refreshCoins();
-  refreshEquipped();
-  setupEditor();
-  loadShop();
-  loadBattlePass();
-})();
-</script>
-<script src="auth.js"></script>
-</body>
-</html>
+      l

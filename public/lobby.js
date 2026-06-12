@@ -27,7 +27,12 @@
   let myId = null;
 
   const KEY_USERNAME = 'ggmatch_lobby_username';
+  // Clé utilisée par auth.js pour le compte connecté — si l'utilisateur est
+  // connecté, son pseudo de compte est utilisé par défaut dans le lobby.
+  const AUTH_USERNAME_KEY = 'ggmatch_username';
   function getUsername() {
+    const authName = localStorage.getItem(AUTH_USERNAME_KEY);
+    if (authName) return authName;
     let name = localStorage.getItem(KEY_USERNAME);
     if (!name) {
       name = 'Invité' + Math.floor(1000 + Math.random() * 9000);
@@ -302,58 +307,4 @@
     if (!inVoice || !voice) return;
     const ids = Object.keys(voice.peers || {});
     if (ids.length === 0) {
-      elVoiceStatus.textContent = 'Vocal activé — micro ouvert (en attente d’un autre joueur)';
-      return;
-    }
-    const connected = ids.filter((id) => {
-      const st = voice.peers[id] && voice.peers[id].iceConnectionState;
-      return st === 'connected' || st === 'completed';
-    });
-    const failed = ids.filter((id) => {
-      const st = voice.peers[id] && voice.peers[id].iceConnectionState;
-      return st === 'failed';
-    });
-    if (connected.length > 0) {
-      elVoiceStatus.textContent = `Vocal activé — connecté avec ${connected.length} joueur${connected.length > 1 ? 's' : ''}`;
-    } else if (failed.length > 0) {
-      elVoiceStatus.textContent = 'Connexion vocale impossible avec cet appareil (réseau trop restrictif). Réessaie ou change de réseau.';
-    } else {
-      elVoiceStatus.textContent = 'Vocal activé — connexion en cours...';
-    }
-  }
-
-  function leaveVoice() {
-    if (!inVoice) return;
-    inVoice = false;
-    if (socket && socket.connected) socket.emit('voice_leave');
-    if (voice) voice.closeAll();
-    voice = null;
-    if (players[myId]) {
-      players[myId].inVoice = false;
-      updateVoiceIndicator(myId);
-    }
-    elVoiceBtn.textContent = '🎙️ Rejoindre le vocal';
-    elVoiceBtn.classList.remove('active');
-    elVoiceStatus.textContent = '';
-  }
-
-  elVoiceBtn.addEventListener('click', () => {
-    if (inVoice) leaveVoice();
-    else joinVoice();
-  });
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  // Init
-  applyTheme(currentUniverse);
-  ensureSocket();
-
-  window.addEventListener('beforeunload', () => {
-    if (inVoice && socket && socket.connected) socket.emit('voice_leave');
-    if (socket && socket.connected) socket.emit('lobby_leave');
-  });
-})();
+      elVoiceStatus.textContent = 'Vocal activé — micro ouvert (en

@@ -92,33 +92,3 @@
       if (peers[id]) {
         peers[id].close();
         delete peers[id];
-      }
-      if (audioEls[id]) {
-        audioEls[id].remove();
-        delete audioEls[id];
-      }
-    }
-
-    function closeAll() {
-      Object.keys(peers).forEach(closePeer);
-      if (localStream) {
-        localStream.getTracks().forEach((t) => t.stop());
-        localStream = null;
-      }
-    }
-
-    function isMuted() {
-      if (!localStream) return true;
-      return !localStream.getAudioTracks().some((t) => t.enabled);
-    }
-
-    function setMuted(muted) {
-      if (!localStream) return;
-      localStream.getAudioTracks().forEach((t) => { t.enabled = !muted; });
-    }
-
-    return { getLocalStream, callPeer, handleSignal, closePeer, closeAll, isMuted, setMuted, peers };
-  }
-
-  window.GGVoice = { createVoiceManager };
-})();

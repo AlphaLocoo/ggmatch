@@ -14,6 +14,7 @@ mongoose.connect(process.env.MONGODB_URI)
     seedShopItems();
     seedBattlePass();
     seedFeaturedTournaments();
+    migrateTournamentTiers();
   })
   .catch((err) => console.error('Erreur connexion MongoDB:', err.message));
 
@@ -25,38 +26,38 @@ async function seedEvents() {
 
     const seed = [
       // GGMatch — Gaming
-      { universe: 'GGMatch', type: 'tournoi', title: 'Tournoi Valorant 5v5 — Saison Été', description: 'Tournoi communautaire en élimination directe, ouvert à tous les niveaux.', date: new Date('2026-06-14T20:00:00+02:00'), format: '5v5 · Simple élimination', prize: '500€ + skins exclusifs', host: 'Équipe GGMatch', link: '/?univers=GGMatch#jouer' },
-      { universe: 'GGMatch', type: 'tournoi', title: 'Clash communautaire League of Legends', description: 'Affrontez d\'autres équipes de la communauté en BO1.', date: new Date('2026-06-21T19:00:00+02:00'), format: '5v5 · BO1', prize: 'Abonnements Pro offerts', host: 'Équipe GGMatch', link: '/?univers=GGMatch#jouer' },
+      { universe: 'GGMatch', type: 'tournoi', title: 'Tournoi Valorant 5v5 — Saison Été', description: 'Tournoi communautaire en élimination directe, ouvert à tous les niveaux.', date: new Date('2026-06-14T20:00:00+02:00'), format: '5v5 · Simple élimination', prize: '500€ + skins exclusifs', host: 'Équipe GGMatch', link: '/?univers=GGMatch#jouer', tier: 'free', coinReward: 300 },
+      { universe: 'GGMatch', type: 'tournoi', title: 'Clash communautaire League of Legends', description: 'Affrontez d\'autres équipes de la communauté en BO1.', date: new Date('2026-06-21T19:00:00+02:00'), format: '5v5 · BO1', prize: 'Abonnements Pro offerts', host: 'Équipe GGMatch', link: '/?univers=GGMatch#jouer', tier: 'free', coinReward: 250 },
       { universe: 'GGMatch', type: 'live', title: 'Coaching Diamond+ en direct avec ProGamer_Lex', description: 'Analyse de replays et conseils pour grimper en ranked.', date: new Date('2026-06-12T21:00:00+02:00'), format: 'Live Twitch', host: 'ProGamer_Lex', link: '/?univers=GGMatch#jouer' },
       { universe: 'GGMatch', type: 'live', title: 'Watch Party — Finale Esport Mondiale', description: 'Regardez la finale ensemble avec le chat communautaire.', date: new Date('2026-06-25T18:00:00+02:00'), format: 'Live communautaire', host: 'Équipe GGMatch', link: '/?univers=GGMatch#jouer' },
 
       // BeatMatch — Musique
-      { universe: 'BeatMatch', type: 'tournoi', title: 'Beat Battle — Production Hip-Hop', description: 'Affrontez d\'autres producteurs sur un même thème, votes communautaires.', date: new Date('2026-06-15T20:00:00+02:00'), format: '1v1 · Battle de prods', prize: 'Mise en avant + pack samples', host: 'Équipe BeatMatch', link: '/?univers=BeatMatch#jouer' },
-      { universe: 'BeatMatch', type: 'tournoi', title: 'Freestyle Cypher en ligne', description: 'Cypher ouvert, chacun son couplet, l\'ambiance avant tout.', date: new Date('2026-06-20T21:00:00+02:00'), format: 'Cypher collectif', prize: 'Featuring avec un artiste partenaire', host: 'Équipe BeatMatch', link: '/?univers=BeatMatch#jouer' },
+      { universe: 'BeatMatch', type: 'tournoi', title: 'Beat Battle — Production Hip-Hop', description: 'Affrontez d\'autres producteurs sur un même thème, votes communautaires.', date: new Date('2026-06-15T20:00:00+02:00'), format: '1v1 · Battle de prods', prize: 'Mise en avant + pack samples', host: 'Équipe BeatMatch', link: '/?univers=BeatMatch#jouer', tier: 'free', coinReward: 250 },
+      { universe: 'BeatMatch', type: 'tournoi', title: 'Freestyle Cypher en ligne', description: 'Cypher ouvert, chacun son couplet, l\'ambiance avant tout.', date: new Date('2026-06-20T21:00:00+02:00'), format: 'Cypher collectif', prize: 'Featuring avec un artiste partenaire', host: 'Équipe BeatMatch', link: '/?univers=BeatMatch#jouer', tier: 'free', coinReward: 250 },
       { universe: 'BeatMatch', type: 'live', title: 'Session Mix & Mastering avec DJ Nova', description: 'Démonstration en direct des techniques de mix.', date: new Date('2026-06-13T19:00:00+02:00'), format: 'Live', host: 'DJ Nova', link: '/?univers=BeatMatch#jouer' },
       { universe: 'BeatMatch', type: 'live', title: 'Jam acoustique communautaire', description: 'Session improvisée ouverte à tous les instruments.', date: new Date('2026-06-19T20:00:00+02:00'), format: 'Live', host: 'Équipe BeatMatch', link: '/?univers=BeatMatch#jouer' },
 
       // StudyMatch — Études
-      { universe: 'StudyMatch', type: 'tournoi', title: 'Quiz Battle — Culture Générale', description: 'Quiz chronométré en équipes de deux.', date: new Date('2026-06-16T18:00:00+02:00'), format: 'Duo · Quiz chronométré', prize: 'Mois Pro offert', host: 'Équipe StudyMatch', link: '/?univers=StudyMatch#jouer' },
-      { universe: 'StudyMatch', type: 'tournoi', title: 'Marathon Révisions Concours', description: 'Session longue durée en binômes, objectifs fixés ensemble.', date: new Date('2026-06-22T09:00:00+02:00'), format: 'Marathon Pomodoro', prize: 'Classement + badges', host: 'Équipe StudyMatch', link: '/?univers=StudyMatch#jouer' },
+      { universe: 'StudyMatch', type: 'tournoi', title: 'Quiz Battle — Culture Générale', description: 'Quiz chronométré en équipes de deux.', date: new Date('2026-06-16T18:00:00+02:00'), format: 'Duo · Quiz chronométré', prize: 'Mois Pro offert', host: 'Équipe StudyMatch', link: '/?univers=StudyMatch#jouer', tier: 'free', coinReward: 250 },
+      { universe: 'StudyMatch', type: 'tournoi', title: 'Marathon Révisions Concours', description: 'Session longue durée en binômes, objectifs fixés ensemble.', date: new Date('2026-06-22T09:00:00+02:00'), format: 'Marathon Pomodoro', prize: 'Classement + badges', host: 'Équipe StudyMatch', link: '/?univers=StudyMatch#jouer', tier: 'free', coinReward: 200 },
       { universe: 'StudyMatch', type: 'live', title: 'Masterclass méthode Pomodoro', description: 'Apprendre à structurer ses sessions de révision.', date: new Date('2026-06-14T17:00:00+02:00'), format: 'Live', host: 'Équipe StudyMatch', link: '/?univers=StudyMatch#jouer' },
       { universe: 'StudyMatch', type: 'live', title: 'Co-révision Médecine PASS', description: 'Salon vocal partagé pour réviser ensemble en direct.', date: new Date('2026-06-17T20:00:00+02:00'), format: 'Live', host: 'Communauté PASS', link: '/?univers=StudyMatch#jouer' },
 
       // TalkMatch — Langues
-      { universe: 'TalkMatch', type: 'tournoi', title: 'Speed Language Exchange — 6 langues', description: 'Rotation de mini-conversations de 5 minutes.', date: new Date('2026-06-15T18:30:00+02:00'), format: 'Speed exchange', prize: 'Badge Polyglotte', host: 'Équipe TalkMatch', link: '/?univers=TalkMatch#jouer' },
-      { universe: 'TalkMatch', type: 'tournoi', title: 'Concours d\'accent — Imitation native', description: 'Défi de prononciation jugé par la communauté.', date: new Date('2026-06-21T19:00:00+02:00'), format: 'Défi communautaire', prize: 'Mois Pro offert', host: 'Équipe TalkMatch', link: '/?univers=TalkMatch#jouer' },
+      { universe: 'TalkMatch', type: 'tournoi', title: 'Speed Language Exchange — 6 langues', description: 'Rotation de mini-conversations de 5 minutes.', date: new Date('2026-06-15T18:30:00+02:00'), format: 'Speed exchange', prize: 'Badge Polyglotte', host: 'Équipe TalkMatch', link: '/?univers=TalkMatch#jouer', tier: 'free', coinReward: 200 },
+      { universe: 'TalkMatch', type: 'tournoi', title: 'Concours d\'accent — Imitation native', description: 'Défi de prononciation jugé par la communauté.', date: new Date('2026-06-21T19:00:00+02:00'), format: 'Défi communautaire', prize: 'Mois Pro offert', host: 'Équipe TalkMatch', link: '/?univers=TalkMatch#jouer', tier: 'free', coinReward: 250 },
       { universe: 'TalkMatch', type: 'live', title: 'Conversation Club Anglais', description: 'Discussion ouverte, tous niveaux bienvenus.', date: new Date('2026-06-13T18:00:00+02:00'), format: 'Live', host: 'Équipe TalkMatch', link: '/?univers=TalkMatch#jouer' },
       { universe: 'TalkMatch', type: 'live', title: 'Atelier culture & langue japonaise', description: 'Découverte culturelle et bases de conversation.', date: new Date('2026-06-18T19:30:00+02:00'), format: 'Live', host: 'Communauté JP', link: '/?univers=TalkMatch#jouer' },
 
       // GymMatch — Sport
-      { universe: 'GymMatch', type: 'tournoi', title: 'Challenge Fitness 30 jours — Lancement', description: 'Inscriptions ouvertes pour le challenge collectif du mois.', date: new Date('2026-06-16T08:00:00+02:00'), format: 'Challenge collectif', prize: 'Pack équipement sportif', host: 'Équipe GymMatch', link: '/?univers=GymMatch#jouer' },
-      { universe: 'GymMatch', type: 'tournoi', title: 'Tournoi Running virtuel 10km', description: 'Chacun court de son côté, classement en temps réel.', date: new Date('2026-06-23T09:00:00+02:00'), format: 'Course virtuelle', prize: 'Médaille digitale + Pro', host: 'Équipe GymMatch', link: '/?univers=GymMatch#jouer' },
+      { universe: 'GymMatch', type: 'tournoi', title: 'Challenge Fitness 30 jours — Lancement', description: 'Inscriptions ouvertes pour le challenge collectif du mois.', date: new Date('2026-06-16T08:00:00+02:00'), format: 'Challenge collectif', prize: 'Pack équipement sportif', host: 'Équipe GymMatch', link: '/?univers=GymMatch#jouer', tier: 'free', coinReward: 250 },
+      { universe: 'GymMatch', type: 'tournoi', title: 'Tournoi Running virtuel 10km', description: 'Chacun court de son côté, classement en temps réel.', date: new Date('2026-06-23T09:00:00+02:00'), format: 'Course virtuelle', prize: 'Médaille digitale + Pro', host: 'Équipe GymMatch', link: '/?univers=GymMatch#jouer', tier: 'free', coinReward: 250 },
       { universe: 'GymMatch', type: 'live', title: 'Cours collectif HIIT en direct', description: 'Séance guidée en direct, tous niveaux.', date: new Date('2026-06-12T18:30:00+02:00'), format: 'Live', host: 'Coach GymMatch', link: '/?univers=GymMatch#jouer' },
       { universe: 'GymMatch', type: 'live', title: 'Live Yoga matinal', description: 'Réveil en douceur avant la journée.', date: new Date('2026-06-14T07:30:00+02:00'), format: 'Live', host: 'Coach GymMatch', link: '/?univers=GymMatch#jouer' },
 
       // CreateMatch — Créatif
-      { universe: 'CreateMatch', type: 'tournoi', title: 'Concours Design — Affiche thème "Futur"', description: 'Création libre sur le thème, votes communautaires.', date: new Date('2026-06-17T20:00:00+02:00'), format: 'Concours créatif', prize: 'Mise en avant + Pro', host: 'Équipe CreateMatch', link: '/?univers=CreateMatch#jouer' },
-      { universe: 'CreateMatch', type: 'tournoi', title: 'Battle d\'illustration speedpaint', description: 'Une heure chrono pour illustrer le thème imposé.', date: new Date('2026-06-22T19:00:00+02:00'), format: 'Speedpaint · 1h', prize: 'Pack ressources premium', host: 'Équipe CreateMatch', link: '/?univers=CreateMatch#jouer' },
+      { universe: 'CreateMatch', type: 'tournoi', title: 'Concours Design — Affiche thème "Futur"', description: 'Création libre sur le thème, votes communautaires.', date: new Date('2026-06-17T20:00:00+02:00'), format: 'Concours créatif', prize: 'Mise en avant + Pro', host: 'Équipe CreateMatch', link: '/?univers=CreateMatch#jouer', tier: 'free', coinReward: 250 },
+      { universe: 'CreateMatch', type: 'tournoi', title: 'Battle d\'illustration speedpaint', description: 'Une heure chrono pour illustrer le thème imposé.', date: new Date('2026-06-22T19:00:00+02:00'), format: 'Speedpaint · 1h', prize: 'Pack ressources premium', host: 'Équipe CreateMatch', link: '/?univers=CreateMatch#jouer', tier: 'free', coinReward: 250 },
       { universe: 'CreateMatch', type: 'live', title: 'Live Drawing avec un illustrateur pro', description: 'Démonstration de technique en direct, questions ouvertes.', date: new Date('2026-06-13T20:00:00+02:00'), format: 'Live', host: 'Illustrateur invité', link: '/?univers=CreateMatch#jouer' },
       { universe: 'CreateMatch', type: 'live', title: 'Critique de portfolio en direct', description: 'Retours constructifs sur les portfolios envoyés.', date: new Date('2026-06-19T19:00:00+02:00'), format: 'Live', host: 'Équipe CreateMatch', link: '/?univers=CreateMatch#jouer' },
     ];
@@ -145,6 +146,15 @@ async function seedShopItems() {
       { universe: 'CreateMatch', type: 'outfit', slot: 'apron', name: 'Tablier créatif', description: 'Pour ne pas tacher tes habits.', price: 110, color: '#f97316' },
       { universe: 'CreateMatch', type: 'outfit', slot: 'overalls', name: 'Salopette créative', description: 'Look atelier décontracté.', price: 130, color: '#f97316' },
       { universe: 'CreateMatch', type: 'outfit', slot: 'print-jacket', name: 'Veste imprimée', description: 'Un motif unique, signé toi.', price: 120, color: '#7c3aed' },
+
+      // Skins VIP — achetables à l'unité en argent réel (Stripe), un par univers.
+      // Design doré exclusif, non disponible contre des pièces.
+      { universe: 'GGMatch', type: 'outfit', slot: 'vip-legend', name: 'Tenue VIP — Légende dorée', description: 'Design exclusif doré, réservé aux joueurs VIP. Achat unique, à toi pour toujours.', price: null, color: '#ffd60a', vip: true, priceEur: 2.99 },
+      { universe: 'BeatMatch', type: 'outfit', slot: 'vip-icon', name: 'Tenue VIP — Icône dorée', description: 'Combinaison scène dorée exclusive, réservée aux membres VIP.', price: null, color: '#ffd60a', vip: true, priceEur: 2.99 },
+      { universe: 'StudyMatch', type: 'outfit', slot: 'vip-major', name: 'Tenue VIP — Major doré', description: 'Toge dorée exclusive pour les meilleurs élèves VIP.', price: null, color: '#ffd60a', vip: true, priceEur: 2.99 },
+      { universe: 'TalkMatch', type: 'outfit', slot: 'vip-ambassador', name: 'Tenue VIP — Ambassadeur doré', description: 'Costume doré exclusif réservé aux membres VIP.', price: null, color: '#ffd60a', vip: true, priceEur: 2.99 },
+      { universe: 'GymMatch', type: 'outfit', slot: 'vip-champion', name: 'Tenue VIP — Champion doré', description: 'Survêtement doré exclusif réservé aux athlètes VIP.', price: null, color: '#ffd60a', vip: true, priceEur: 2.99 },
+      { universe: 'CreateMatch', type: 'outfit', slot: 'vip-visionary', name: 'Tenue VIP — Visionnaire doré', description: 'Tablier doré exclusif réservé aux créateurs VIP.', price: null, color: '#ffd60a', vip: true, priceEur: 2.99 },
     ];
 
     let inserted = 0;
@@ -161,6 +171,9 @@ async function seedShopItems() {
     console.error('Erreur seed boutique:', e.message);
   }
 }
+
+// Univers disposant chacun d'un Pass Saison (cf. avatar.js côté client).
+const BP_UNIVERSES = ['GGMatch', 'BeatMatch', 'StudyMatch', 'TalkMatch', 'GymMatch', 'CreateMatch'];
 
 // Génère les paliers du passe de combat pour un univers donné.
 // 10 paliers, XP cumulée requise = palier * 150. Récompenses gratuites et premium en pièces,
@@ -214,13 +227,15 @@ async function seedBattlePass() {
 async function seedFeaturedTournaments() {
   try {
     const launchDate = new Date('2027-01-01T18:00:00+01:00');
+    // Tournois à cash prize réel : réservés aux abonnés Premium (1 inscription/semaine)
+    // et Pro (1/jour) — voir CASH_TOURNAMENT_COOLDOWN_MS et /api/events/:id/enter.
     const seed = [
-      { universe: 'GGMatch', type: 'tournoi', title: 'Grand Tournoi GGMatch — Saison 1', description: 'Le premier grand tournoi officiel GGMatch, ouvert à tous les niveaux. Inscriptions bientôt disponibles.', date: launchDate, format: 'Bracket multi-jeux · Élimination directe', prize: '1 000€ de cash prize', host: 'Équipe GGMatch', link: '/?univers=GGMatch#jouer', featured: true },
-      { universe: 'BeatMatch', type: 'tournoi', title: 'Grand Battle BeatMatch — Saison 1', description: 'La première grande battle officielle BeatMatch, tous styles musicaux confondus.', date: launchDate, format: 'Battle · Votes communautaires', prize: '500€ de cash prize', host: 'Équipe BeatMatch', link: '/?univers=BeatMatch#jouer', featured: true },
-      { universe: 'StudyMatch', type: 'tournoi', title: 'Grand Tournoi StudyMatch — Saison 1', description: 'Le premier grand tournoi de quiz et révisions par équipes StudyMatch.', date: launchDate, format: 'Duo · Quiz chronométré', prize: '500€ de cash prize', host: 'Équipe StudyMatch', link: '/?univers=StudyMatch#jouer', featured: true },
-      { universe: 'TalkMatch', type: 'tournoi', title: 'Grand Tournoi TalkMatch — Saison 1', description: 'Le premier grand échange linguistique multi-langues TalkMatch, avec classement et récompenses.', date: launchDate, format: 'Speed exchange · Multi-langues', prize: '500€ de cash prize', host: 'Équipe TalkMatch', link: '/?univers=TalkMatch#jouer', featured: true },
-      { universe: 'GymMatch', type: 'tournoi', title: 'Grand Challenge GymMatch — Saison 1', description: 'Le premier grand challenge fitness collectif GymMatch, classement en temps réel.', date: launchDate, format: 'Challenge collectif · Classement', prize: '500€ de cash prize', host: 'Équipe GymMatch', link: '/?univers=GymMatch#jouer', featured: true },
-      { universe: 'CreateMatch', type: 'tournoi', title: 'Grand Concours CreateMatch — Saison 1', description: 'Le premier grand concours créatif CreateMatch, votes communautaires et mise en avant des gagnants.', date: launchDate, format: 'Concours créatif · Votes communautaires', prize: '500€ de cash prize', host: 'Équipe CreateMatch', link: '/?univers=CreateMatch#jouer', featured: true },
+      { universe: 'GGMatch', type: 'tournoi', title: 'Grand Tournoi GGMatch — Saison 1', description: 'Le premier grand tournoi officiel GGMatch, ouvert à tous les niveaux. Inscriptions bientôt disponibles.', date: launchDate, format: 'Bracket multi-jeux · Élimination directe', prize: '1 000€ de cash prize', host: 'Équipe GGMatch', link: '/?univers=GGMatch#jouer', featured: true, tier: 'cash', entryPlan: 'premium' },
+      { universe: 'BeatMatch', type: 'tournoi', title: 'Grand Battle BeatMatch — Saison 1', description: 'La première grande battle officielle BeatMatch, tous styles musicaux confondus.', date: launchDate, format: 'Battle · Votes communautaires', prize: '500€ de cash prize', host: 'Équipe BeatMatch', link: '/?univers=BeatMatch#jouer', featured: true, tier: 'cash', entryPlan: 'premium' },
+      { universe: 'StudyMatch', type: 'tournoi', title: 'Grand Tournoi StudyMatch — Saison 1', description: 'Le premier grand tournoi de quiz et révisions par équipes StudyMatch.', date: launchDate, format: 'Duo · Quiz chronométré', prize: '500€ de cash prize', host: 'Équipe StudyMatch', link: '/?univers=StudyMatch#jouer', featured: true, tier: 'cash', entryPlan: 'premium' },
+      { universe: 'TalkMatch', type: 'tournoi', title: 'Grand Tournoi TalkMatch — Saison 1', description: 'Le premier grand échange linguistique multi-langues TalkMatch, avec classement et récompenses.', date: launchDate, format: 'Speed exchange · Multi-langues', prize: '500€ de cash prize', host: 'Équipe TalkMatch', link: '/?univers=TalkMatch#jouer', featured: true, tier: 'cash', entryPlan: 'premium' },
+      { universe: 'GymMatch', type: 'tournoi', title: 'Grand Challenge GymMatch — Saison 1', description: 'Le premier grand challenge fitness collectif GymMatch, classement en temps réel.', date: launchDate, format: 'Challenge collectif · Classement', prize: '500€ de cash prize', host: 'Équipe GymMatch', link: '/?univers=GymMatch#jouer', featured: true, tier: 'cash', entryPlan: 'premium' },
+      { universe: 'CreateMatch', type: 'tournoi', title: 'Grand Concours CreateMatch — Saison 1', description: 'Le premier grand concours créatif CreateMatch, votes communautaires et mise en avant des gagnants.', date: launchDate, format: 'Concours créatif · Votes communautaires', prize: '500€ de cash prize', host: 'Équipe CreateMatch', link: '/?univers=CreateMatch#jouer', featured: true, tier: 'cash', entryPlan: 'premium' },
     ];
 
     let inserted = 0;
@@ -238,6 +253,24 @@ async function seedFeaturedTournaments() {
   }
 }
 
+// Backfill pour les événements créés avant l'ajout du système de tournois
+// à deux niveaux (gratuit / cash prize) : leur attribue un `tier` par défaut
+// s'ils n'en ont pas encore.
+async function migrateTournamentTiers() {
+  try {
+    await Event.updateMany(
+      { type: 'tournoi', featured: true, tier: { $exists: false } },
+      { $set: { tier: 'cash', entryPlan: 'premium' } }
+    );
+    await Event.updateMany(
+      { type: 'tournoi', tier: { $exists: false } },
+      { $set: { tier: 'free', coinReward: 200 } }
+    );
+  } catch (e) {
+    console.error('Erreur migration tournois:', e.message);
+  }
+}
+
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
@@ -251,7 +284,11 @@ const UserSchema = new mongoose.Schema({
   battlePassPremium: { type: mongoose.Schema.Types.Mixed, default: {} },
   battlePassClaimed: { type: mongoose.Schema.Types.Mixed, default: {} },
   matchHistory: [{ universe: String, partner: String, date: { type: Date, default: Date.now } }],
-  stripeCustomerId: String
+  stripeCustomerId: String,
+  // Historique des inscriptions aux tournois (pour limiter la fréquence des
+  // tournois cash prize selon le plan : premium = 1/semaine, pro = 1/jour).
+  cashTournamentEntries: [{ eventId: mongoose.Schema.Types.ObjectId, date: { type: Date, default: Date.now } }],
+  freeTournamentEntries: [{ eventId: mongoose.Schema.Types.ObjectId, date: { type: Date, default: Date.now } }]
 }, { timestamps: true });
 const User = mongoose.model('User', UserSchema);
 
@@ -267,7 +304,16 @@ const EventSchema = new mongoose.Schema({
   host: String,
   link: String,
   status: { type: String, enum: ['upcoming', 'live', 'ended'], default: 'upcoming' },
-  featured: { type: Boolean, default: false }
+  featured: { type: Boolean, default: false },
+  // --- Système de tournois à deux niveaux ---
+  // 'free' : ouvert à tous, le/la gagnant·e remporte des e-coins (coinReward).
+  // 'cash' : cash prize réel, réservé aux abonnés selon entryPlan (premium = 1
+  //          inscription/semaine, pro = 1/jour — voir CASH_TOURNAMENT_COOLDOWN_MS).
+  //          ⚠️ Nécessite une validation juridique (droit des jeux d'argent / ANJ
+  //          en France) avant toute mise en production avec de vrais gains.
+  tier: { type: String, enum: ['free', 'cash'], default: 'free' },
+  coinReward: { type: Number, default: 0 },
+  entryPlan: { type: String, enum: ['free', 'premium', 'pro'], default: 'free' }
 }, { timestamps: true });
 const Event = mongoose.model('Event', EventSchema);
 
@@ -281,7 +327,11 @@ const ShopItemSchema = new mongoose.Schema({
   price: Number,
   icon: String,
   color: String,
-  value: String
+  value: String,
+  // Skins VIP : achetables à l'unité en argent réel (Stripe), indépendamment des
+  // pièces et du Pass Saison. priceEur est utilisé par /create-vip-skin-checkout.
+  vip: { type: Boolean, default: false },
+  priceEur: Number
 }, { timestamps: true });
 const ShopItem = mongoose.model('ShopItem', ShopItemSchema);
 
@@ -327,12 +377,20 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
     if (username) {
       try {
         if (session.mode === 'subscription') {
-          await User.findOneAndUpdate({ username }, { plan: 'pro' });
-          console.log(`Abonnement Pro activé pour ${username}`);
+          // Le plan ('premium' ou 'pro') est transmis via les metadata de la session
+          // (voir /create-checkout). Par défaut 'premium' si absent (anciennes sessions).
+          const plan = (session.metadata && session.metadata.plan) || 'premium';
+          await User.findOneAndUpdate({ username }, { plan });
+          console.log(`Abonnement ${plan} activé pour ${username}`);
         } else if (session.mode === 'payment' && session.metadata && session.metadata.universe) {
           const universe = session.metadata.universe;
           await User.findOneAndUpdate({ username }, { [`battlePassPremium.${universe}`]: true });
           console.log(`Passe premium ${universe} activé pour ${username}`);
+        } else if (session.mode === 'payment' && session.metadata && session.metadata.vipItemId) {
+          // Skin VIP acheté à l'unité : ajouté à l'inventaire (idempotent via $addToSet).
+          const itemId = session.metadata.vipItemId;
+          await User.findOneAndUpdate({ username }, { $addToSet: { inventory: itemId } });
+          console.log(`Skin VIP ${itemId} débloqué pour ${username}`);
         }
       } catch (e) {
         console.error('Erreur mise à jour utilisateur après paiement:', e.message);
@@ -419,6 +477,76 @@ app.delete('/api/events/:id', requireAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: e.message });
+  }
+});
+
+// --- Inscription aux tournois ---
+// Tournois gratuits (tier: 'free') : ouverts à tous, le/la gagnant·e remporte
+// `coinReward` en e-coins ; une petite récompense de participation est
+// créditée immédiatement pour encourager l'inscription.
+// Tournois cash prize (tier: 'cash') : réservés aux abonnés Premium (1
+// inscription/semaine) et Pro (1/jour).
+// ⚠️ Système de cash prize : nécessite une validation juridique (droit des
+// jeux d'argent / ANJ en France) avant toute mise en production avec de
+// vrais paiements de gains.
+const CASH_TOURNAMENT_COOLDOWN_MS = {
+  premium: 7 * 24 * 60 * 60 * 1000, // 1 inscription / semaine
+  pro: 24 * 60 * 60 * 1000          // 1 inscription / jour
+};
+const FREE_TOURNAMENT_ENTRY_BONUS = 20; // e-coins offerts à l'inscription
+
+app.post('/api/events/:id/enter', requireAuth, async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event || event.type !== 'tournoi') {
+      return res.status(404).json({ error: 'Tournoi introuvable' });
+    }
+
+    const user = await User.findOne({ username: req.username });
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    if (event.tier === 'cash') {
+      const plan = user.plan || 'free';
+      if (plan !== 'premium' && plan !== 'pro') {
+        return res.status(403).json({
+          error: 'Les tournois cash prize sont réservés aux abonnés Premium et Pro.',
+          requiresPlan: event.entryPlan || 'premium'
+        });
+      }
+      const cooldown = CASH_TOURNAMENT_COOLDOWN_MS[plan];
+      const now = Date.now();
+      const entries = (user.cashTournamentEntries || []).filter((e) => e.date && (now - new Date(e.date).getTime()) < cooldown);
+      if (entries.length > 0) {
+        const lastEntry = Math.max(...entries.map((e) => new Date(e.date).getTime()));
+        const nextEntryAt = new Date(lastEntry + cooldown);
+        const freq = plan === 'pro' ? 'jour' : 'semaine';
+        return res.status(429).json({
+          error: `Tu as déjà utilisé ton inscription cash prize de la ${freq}. Prochaine dispo le ${nextEntryAt.toLocaleDateString('fr-FR')}.`,
+          nextEntryAt
+        });
+      }
+      user.cashTournamentEntries.push({ eventId: event._id, date: new Date() });
+      await user.save();
+      return res.json({ ok: true, tier: 'cash', message: 'Inscription confirmée au tournoi cash prize ! Bonne chance 🏆' });
+    }
+
+    // Tournoi gratuit
+    const alreadyEntered = (user.freeTournamentEntries || []).some((e) => String(e.eventId) === String(event._id));
+    if (alreadyEntered) {
+      return res.json({ ok: true, tier: 'free', alreadyEntered: true, message: 'Tu es déjà inscrit·e à ce tournoi.', coins: user.coins });
+    }
+    user.coins = (user.coins || 0) + FREE_TOURNAMENT_ENTRY_BONUS;
+    user.freeTournamentEntries.push({ eventId: event._id, date: new Date() });
+    await user.save();
+    return res.json({
+      ok: true,
+      tier: 'free',
+      message: `Inscription confirmée ! +${FREE_TOURNAMENT_ENTRY_BONUS} 🪙 de bienvenue. Le/la gagnant·e remportera ${event.coinReward || 0} 🪙 !`,
+      coins: user.coins,
+      coinReward: event.coinReward || 0
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -541,237 +669,7 @@ app.get('/api/me', requireAuth, async (req, res) => {
   try {
     const user = await User.findOne({ username: req.username }).select('-password');
     if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
-    res.json(user);
-  } catch (e) {
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// Mise à jour partielle du profil (synchronisation avec le client)
-app.put('/api/profile', requireAuth, async (req, res) => {
-  try {
-    const allowed = ['coins', 'avatarConfig', 'inventory', 'equipped', 'battlePassXP', 'battlePassPremium', 'battlePassClaimed'];
-    const update = {};
-    for (const key of allowed) {
-      if (req.body[key] !== undefined) update[key] = req.body[key];
-    }
-    const user = await User.findOneAndUpdate({ username: req.username }, update, { new: true, upsert: false }).select('-password');
-    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
-    res.json(user);
-  } catch (e) {
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// Ajoute une partie à l'historique du joueur (50 dernières conservées)
-app.post('/api/profile/match', requireAuth, async (req, res) => {
-  try {
-    const { universe, partner } = req.body;
-    const user = await User.findOneAndUpdate(
-      { username: req.username },
-      { $push: { matchHistory: { $each: [{ universe, partner, date: new Date() }], $slice: -50 } } },
-      { new: true }
-    ).select('-password');
-    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
-    res.json(user);
-  } catch (e) {
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// Calcule un score d'affinité entre deux joueurs en file d'attente
-// selon les filtres choisis (jeu, niveau, langue, etc.) pour cet univers.
-function matchScore(a, b) {
-  let score = 0;
-  const fa = a.filters || {};
-  const fb = b.filters || {};
-
-  if (a.game === 'TalkMatch') {
-    // Échange linguistique croisé : ma langue cible = sa langue maternelle (et vice versa)
-    if (fa.target && fb.native && fa.target === fb.native) score += 2;
-    if (fa.native && fb.target && fa.native === fb.target) score += 2;
-    return score;
-  }
-
-  for (const key of Object.keys(fa)) {
-    if (fa[key] && fb[key] && fa[key] === fb[key]) score += 1;
-  }
-  return score;
-}
-
-// Matchmaking
-io.on('connection', (socket) => {
-  console.log('Joueur connecté:', socket.id);
-
-  socket.on('find_match', (data) => {
-    // Mode invité : aucun compte requis, un pseudo est généré si besoin
-    socket.username = (data && data.username && data.username.trim()) || `Invité${Math.floor(1000 + Math.random() * 9000)}`;
-    socket.game = (data && data.game) || 'Match';
-    socket.filters = (data && data.filters) || {};
-
-    if (!queue.includes(socket)) queue.push(socket);
-
-    // On cherche le meilleur partenaire compatible déjà en attente sur cet univers
-    const candidates = queue.filter((s) => s !== socket && s.game === socket.game);
-    if (candidates.length > 0) {
-      let best = candidates[0];
-      let bestScore = matchScore(socket, best);
-      for (const c of candidates.slice(1)) {
-        const sc = matchScore(socket, c);
-        if (sc > bestScore) { best = c; bestScore = sc; }
-      }
-
-      queue.splice(queue.indexOf(socket), 1);
-      queue.splice(queue.indexOf(best), 1);
-
-      const room = `room_${socket.id}_${best.id}`;
-      socket.join(room);
-      best.join(room);
-      io.to(room).emit('match_found', {
-        room,
-        players: [socket.username, best.username],
-        playerIds: [socket.id, best.id],
-        game: socket.game,
-        filters: { you: socket.filters, partner: best.filters }
-      });
-    }
-  });
-
-  socket.on('message', (data) => {
-    io.to(data.room).emit('message', {
-      from: socket.username,
-      text: data.text
-    });
-  });
-
-  socket.on('leave_queue', () => {
-    const i = queue.indexOf(socket);
-    if (i > -1) queue.splice(i, 1);
-  });
-
-  // --- Lobby interactif (déplacement par clic + vocal de groupe) ---
-
-  socket.on('lobby_join', (data) => {
-    const universe = (data && data.universe) || 'GGMatch';
-    const username = (data && data.username && data.username.trim()) || `Invité${Math.floor(1000 + Math.random() * 9000)}`;
-    const config = (data && data.config) || null;
-    const equipped = (data && data.equipped) || null;
-
-    leaveLobby(socket);
-
-    const x = 80 + Math.random() * 740;
-    const y = 80 + Math.random() * 320;
-    socket.lobbyUniverse = universe;
-    lobbyPlayers[socket.id] = { universe, username, x, y, inVoice: false, config, equipped };
-    socket.join(lobbyRoomName(universe));
-
-    const others = Object.entries(lobbyPlayers)
-      .filter(([id, p]) => id !== socket.id && p.universe === universe)
-      .map(([id, p]) => ({ id, username: p.username, x: p.x, y: p.y, inVoice: p.inVoice, config: p.config, equipped: p.equipped }));
-
-    socket.emit('lobby_state', { self: { id: socket.id, x, y, username }, players: others });
-    socket.to(lobbyRoomName(universe)).emit('lobby_player_joined', { id: socket.id, username, x, y, inVoice: false, config, equipped });
-  });
-
-  socket.on('lobby_move', (data) => {
-    const p = lobbyPlayers[socket.id];
-    if (!p || !data) return;
-    p.x = data.x;
-    p.y = data.y;
-    socket.to(lobbyRoomName(p.universe)).emit('lobby_player_moved', { id: socket.id, x: p.x, y: p.y });
-  });
-
-  socket.on('lobby_leave', () => leaveLobby(socket));
-
-  // Vocal de groupe (mesh WebRTC) : on annonce sa présence aux autres membres déjà en vocal
-  socket.on('voice_join', () => {
-    const p = lobbyPlayers[socket.id];
-    if (!p) return;
-    const peers = Object.entries(lobbyPlayers)
-      .filter(([id, o]) => id !== socket.id && o.universe === p.universe && o.inVoice)
-      .map(([id]) => id);
-    p.inVoice = true;
-    socket.emit('voice_peers', { peers });
-    socket.to(lobbyRoomName(p.universe)).emit('voice_peer_joined', { id: socket.id });
-  });
-
-  socket.on('voice_leave', () => {
-    const p = lobbyPlayers[socket.id];
-    if (!p) return;
-    p.inVoice = false;
-    socket.to(lobbyRoomName(p.universe)).emit('voice_peer_left', { id: socket.id });
-  });
-
-  // Relais générique de signalisation WebRTC (lobby vocal de groupe + vocal 1v1 en match)
-  socket.on('webrtc_signal', (data) => {
-    if (!data || !data.to) return;
-    io.to(data.to).emit('webrtc_signal', { from: socket.id, data: data.data });
-  });
-
-  socket.on('disconnect', () => {
-    const i = queue.indexOf(socket);
-    if (i > -1) queue.splice(i, 1);
-    leaveLobby(socket);
-  });
-});
-
-function leaveLobby(socket) {
-  const p = lobbyPlayers[socket.id];
-  if (!p) return;
-  socket.to(lobbyRoomName(p.universe)).emit('lobby_player_left', { id: socket.id });
-  socket.leave(lobbyRoomName(p.universe));
-  delete lobbyPlayers[socket.id];
-}
-
-app.post('/create-checkout', requireAuth, async (req, res) => {
-  const { priceId } = req.body;
-  if (!priceId) return res.status(400).json({ error: 'priceId manquant' });
-  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      client_reference_id: req.username,
-      success_url: 'https://ggmatch-production.up.railway.app/?success=true',
-      cancel_url: 'https://ggmatch-production.up.railway.app/?cancelled=true',
-    });
-    res.json({ url: session.url });
-  } catch (e) {
-    console.error('Erreur Stripe:', e.message);
-    res.status(500).json({ error: 'Erreur lors de la création du paiement' });
-  }
-});
-
-// Achat du palier Premium du passe de combat (paiement unique, par univers)
-const BATTLEPASS_PRICE_EUR = 4.99;
-app.post('/create-battlepass-checkout', requireAuth, async (req, res) => {
-  const { universe } = req.body;
-  if (!universe) return res.status(400).json({ error: 'universe manquant' });
-  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: [{
-        price_data: {
-          currency: 'eur',
-          unit_amount: Math.round(BATTLEPASS_PRICE_EUR * 100),
-          product_data: { name: `Pass Saison Premium — ${universe}` }
-        },
-        quantity: 1
-      }],
-      client_reference_id: req.username,
-      metadata: { universe },
-      success_url: `https://ggmatch-production.up.railway.app/boutique.html?bp_premium=${encodeURIComponent(universe)}`,
-      cancel_url: 'https://ggmatch-production.up.railway.app/boutique.html?cancelled=true',
-    });
-    res.json({ url: session.url });
-  } catch (e) {
-    console.error('Erreur Stripe (passe de combat):', e.message);
-    res.status(500).json({ error: 'Erreur lors de la création du paiement' });
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`GGMatch tourne sur http://localhost:${PORT}`);
-});
+    const profile = user.toObject();
+    // Avantage Pro : le Pass Saison Premium est inclus sur les 6 univers sans achat séparé.
+    if (profile.plan === 'pro') {
+      profile.ba

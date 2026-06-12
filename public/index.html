@@ -185,12 +185,12 @@
       <div class="plan-price">0€</div>
       <div class="plan-period">Gratuit pour toujours</div>
       <ul class="plan-features">
-        <li class="on"><span class="ck">✓</span> 1 match par jour par univers</li>
-        <li class="on"><span class="ck">✓</span> Accès aux 6 univers</li>
+        <li class="on"><span class="ck">✓</span> 1 match par jour par univers (6 univers)</li>
         <li class="on"><span class="ck">✓</span> Tournois publics</li>
+        <li class="on"><span class="ck">✓</span> Chat vocal en lobby</li>
         <li><span class="cx">✗</span> Matchs illimités</li>
-        <li><span class="cx">✗</span> Chat vocal & vidéo HD</li>
-        <li><span class="cx">✗</span> Coaching</li>
+        <li><span class="cx">✗</span> Tournois & lives exclusifs</li>
+        <li><span class="cx">✗</span> Réduction sur le Pass Saison</li>
       </ul>
       <button class="plan-btn" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Commencer gratuitement</button>
     </div>
@@ -199,14 +199,14 @@
       <div class="plan-price">9€</div>
       <div class="plan-period">par mois · sans engagement</div>
       <ul class="plan-features">
-        <li class="on"><span class="ck">✓</span> Matchs illimités</li>
-        <li class="on"><span class="ck">✓</span> Tous les univers débloqués</li>
+        <li class="on"><span class="ck">✓</span> Matchs illimités sur les 6 univers</li>
         <li class="on"><span class="ck">✓</span> Chat vocal & vidéo HD</li>
-        <li class="on"><span class="ck">✓</span> Tournois exclusifs</li>
-        <li class="on"><span class="ck">✓</span> Stats avancées</li>
-        <li><span class="cx">✗</span> Coaching illimité</li>
+        <li class="on"><span class="ck">✓</span> Tournois & lives exclusifs</li>
+        <li class="on"><span class="ck">✓</span> Badge Premium 👑 sur ton avatar</li>
+        <li class="on"><span class="ck">✓</span> -50% sur le Pass Saison (tous univers)</li>
+        <li><span class="cx">✗</span> Pass Saison inclus gratuitement</li>
       </ul>
-      <button class="plan-btn featured-btn" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">S'abonner maintenant</button>
+      <button class="plan-btn featured-btn" onclick="subscribe('premium')">S'abonner maintenant</button>
     </div>
     <div class="pricing-card">
       <div class="plan-tag">Pro — Pour les sérieux</div>
@@ -214,13 +214,13 @@
       <div class="plan-period">par mois · sans engagement</div>
       <ul class="plan-features">
         <li class="on"><span class="ck">✓</span> Tout Premium inclus</li>
-        <li class="on"><span class="ck">✓</span> Coaching illimité</li>
-        <li class="on"><span class="ck">✓</span> Analyse IA de ta progression</li>
-        <li class="on"><span class="ck">✓</span> Priorité dans le matchmaking</li>
-        <li class="on"><span class="ck">✓</span> Badge Pro visible</li>
+        <li class="on"><span class="ck">✓</span> Pass Saison Premium inclus (6 univers)</li>
+        <li class="on"><span class="ck">✓</span> Badge Pro 💎 sur ton avatar</li>
+        <li class="on"><span class="ck">✓</span> Accès anticipé aux nouveautés</li>
+        <li class="on"><span class="ck">✓</span> Stats avancées + historique complet</li>
         <li class="on"><span class="ck">✓</span> Support prioritaire 24/7</li>
       </ul>
-      <button class="plan-btn" onclick="document.getElementById('jouer').scrollIntoView({behavior:'smooth'})">Devenir Pro</button>
+      <button class="plan-btn" onclick="subscribe('pro')">Devenir Pro</button>
     </div>
   </div>
 </div>
@@ -355,10 +355,22 @@ function setStatus(msg, type) {
   s.style.color = type === 'error' ? '#ff5555' : type === 'success' ? '#00ff87' : '#8a8a8a';
 }
 
-function subscribe(priceId) {
-  fetch('/create-checkout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({priceId: priceId}) })
+function subscribe(plan) {
+  if (!window.GGAuth || !GGAuth.isLoggedIn()) {
+    if (window.GGAuth) GGAuth.openModal();
+    return;
+  }
+  fetch('/create-checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GGAuth.getToken() },
+    body: JSON.stringify({ plan: plan })
+  })
   .then(function(r) { return r.json(); })
-  .then(function(d) { if (d.url) window.location.href = d.url; });
+  .then(function(d) {
+    if (d.url) window.location.href = d.url;
+    else if (d.error) alert(d.error);
+  })
+  .catch(function() { alert('Impossible de lancer le paiement pour le moment.'); });
 }
 
 // Bandeau "Tournoi à la une" — prochain tournoi tous univers confondus
@@ -399,55 +411,27 @@ function subscribe(priceId) {
     return div.innerHTML;
   }
 
-  function renderFeatured(tournoi, othersCount) {
+  function renderFeatured(tournoi, othersCount, me) {
     const root = document.getElementById('featured-tournament-root');
     if (!root || !tournoi) return;
     const meta = UNIVERSE_META[tournoi.universe] || { emoji: '🏆' };
+    const isCash = tournoi.tier === 'cash';
+    const loggedIn = !!(window.GGAuth && window.GGAuth.isLoggedIn && window.GGAuth.isLoggedIn());
+    const plan = me ? (me.plan || 'free') : null;
+
+    // Tournois cash prize : CTA adaptée selon connexion/abonnement de l'utilisateur·rice.
+    let cta = `<a class="ft-cta" href="${tournoi.link || '#jouer'}">Participer →</a>`;
+    if (isCash) {
+      if (!loggedIn) {
+        cta = '<button type="button" class="ft-cta" id="ftLoginCta">🔒 Connecte-toi pour participer</button>';
+      } else if (plan !== 'premium' && plan !== 'pro') {
+        cta = '<a class="ft-cta" href="#pricing">🔒 Débloquer avec Premium/Pro</a>';
+      }
+    }
+
     root.innerHTML = `
       <div class="ft-info">
-        <div class="ft-eyebrow">⭐ Saison 1 — ${meta.emoji} ${escapeHtml(tournoi.universe)}</div>
+        <div class="ft-eyebrow">⭐ Saison 1 — ${meta.emoji} ${escapeHtml(tournoi.universe)} ${isCash ? '<span class="ft-eyebrow-badge">💰 Cash Prize réel</span>' : ''}</div>
         <div class="ft-title">${escapeHtml(tournoi.title || '')}</div>
         <div class="ft-meta">
-          <span><strong>${formatDate(tournoi.date)}</strong></span>
-          ${tournoi.format ? `<span>· ${escapeHtml(tournoi.format)}</span>` : ''}
-          <span class="ft-countdown">${countdownText(tournoi.date)}</span>
-          ${tournoi.prize ? `<span class="ft-prize">🏆 ${escapeHtml(tournoi.prize)}</span>` : ''}
-          ${othersCount > 0 ? `<span>+ ${othersCount} autres grands tournois, un par univers</span>` : ''}
-        </div>
-      </div>
-      <a class="ft-cta" href="${tournoi.link || '#jouer'}">Participer →</a>
-    `;
-    root.style.display = 'flex';
-  }
-
-  // Met en avant les grands tournois "Saison 1" (cash prizes, 1er Janvier 2027) en priorité,
-  // sinon retombe sur le prochain tournoi à venir.
-  fetch('/api/events?type=tournoi&featured=true')
-    .then((r) => r.json())
-    .then((featuredEvents) => {
-      if (featuredEvents && featuredEvents.length > 0) {
-        renderFeatured(featuredEvents[0], featuredEvents.length - 1);
-        return;
-      }
-      return fetch('/api/events?type=tournoi')
-        .then((r) => r.json())
-        .then((events) => renderFeatured((events || [])[0], 0));
-    })
-    .catch(() => {});
-})();
-
-// Pré-remplit le champ "passion" si on arrive depuis une page univers (?univers=...)
-(function () {
-  var params = new URLSearchParams(window.location.search);
-  var univers = params.get('univers');
-  if (univers) {
-    var gameInput = document.getElementById('game');
-    if (gameInput) gameInput.value = univers;
-    var jouer = document.getElementById('jouer');
-    if (jouer) setTimeout(function () { jouer.scrollIntoView({behavior:'smooth'}); }, 300);
-  }
-})();
-</script>
-<script src="auth.js"></script>
-</body>
-</html>
+          <span><strong>${formatDate(tournoi.date)}</strong></

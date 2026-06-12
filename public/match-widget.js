@@ -341,8 +341,19 @@
       .then((events) => {
         const tournois = (events || []).filter((e) => e.type === 'tournoi');
         const lives = (events || []).filter((e) => e.type === 'live');
-        renderEventList(root, 'events-tournoi', tournois);
-        renderEventList(root, 'events-live', lives);
+        // auth.js a fini de charger à ce stade (script suivant, synchrone) :
+        // on peut récupérer le token + le profil (plan, historique d'inscriptions).
+        const token = window.GGAuth && window.GGAuth.getToken && window.GGAuth.getToken();
+        const meRequest = token
+          ? fetch('/api/me', { headers: { Authorization: 'Bearer ' + token } })
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null)
+          : Promise.resolve(null);
+
+        meRequest.then((me) => {
+          renderEventList(root, 'events-tournoi', tournois, me);
+          renderEventList(root, 'events-live', lives, me);
+        });
       })
       .catch(() => {
         renderEventList(root, 'events-tournoi', []);
@@ -350,53 +361,40 @@
       });
   }
 
-  function renderEventList(root, id, items) {
+  function renderEventList(root, id, items, me) {
     const el = root.querySelector('#' + id);
     if (!el) return;
     if (!items.length) {
       el.innerHTML = '<div class="events-empty">Rien de programmé pour le moment — reviens bientôt.</div>';
       return;
     }
-    el.innerHTML = items.map((ev) => `
-      <div class="event-card ${ev.type === 'tournoi' ? 'tournoi-card' : ''}">
-        ${ev.type === 'tournoi' ? '<div class="event-badge">🏆 Tournoi</div>' : ''}
-        <div class="event-date">${formatDate(ev.date)}${ev.type === 'tournoi' ? ` · <span class="event-countdown">${countdownText(ev.date)}</span>` : ''}</div>
+    el.innerHTML = items.map((ev) => renderEventCard(ev, me)).join('');
+    attachEventEntryHandlers(el);
+  }
+
+  // Carte pour un live (affichage simple, sans inscription)
+  function renderLiveCard(ev) {
+    const isLiveNow = countdownText(ev.date) === 'En cours';
+    return `
+      <div class="event-card">
+        ${isLiveNow ? '<div class="event-badges"><div class="event-badge live-badge">🔴 En direct</div></div>' : ''}
+        <div class="event-date">${formatDate(ev.date)}</div>
         <div class="event-title">${escapeHtml(ev.title || '')}</div>
         ${ev.description ? `<div class="event-desc">${escapeHtml(ev.description)}</div>` : ''}
-        ${ev.prize ? `<div class="event-prize-highlight">🏆 À gagner : ${escapeHtml(ev.prize)}</div>` : ''}
         <div class="event-meta">
           ${ev.format ? `<span class="event-tag">${escapeHtml(ev.format)}</span>` : ''}
           ${ev.host ? `<span class="event-tag">${escapeHtml(ev.host)}</span>` : ''}
         </div>
       </div>
-    `).join('');
+    `;
   }
 
-  function formatDate(d) {
-    const date = new Date(d);
-    if (isNaN(date.getTime())) return '';
-    const day = date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-    const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    return `${day} · ${time}`;
-  }
+  // Carte tournoi : distingue visuellement les tournois cash prize (rouge/or, urgence,
+  // gros affichage du gain) des tournois gratuits (e-coins), et propose un bouton
+  // d'inscription branché sur POST /api/events/:id/enter.
+  function renderEventCard(ev, me) {
+    if (ev.type !== 'tournoi') return renderLiveCard(ev);
 
-  // Texte de compte à rebours lisible avant un événement (ex: "Dans 2j 5h")
-  function countdownText(d) {
-    const date = new Date(d);
-    if (isNaN(date.getTime())) return '';
-    const diff = date.getTime() - Date.now();
-    if (diff <= 0) return 'En cours';
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    if (days > 0) return `Dans ${days}j ${hours % 24}h`;
-    if (hours > 0) return `Dans ${hours}h ${minutes % 60}min`;
-    return `Dans ${minutes}min`;
-  }
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-})();
+    const isCash = ev.tier === 'cash';
+    const countdown = countdownText(ev.date);
+    const loggedIn = !!(window.GGAuth && window.GGAuth.is
