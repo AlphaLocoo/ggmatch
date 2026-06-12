@@ -46,7 +46,7 @@
           '<p class="auth-error" id="authError"></p>' +
           '<button type="submit" class="auth-submit">Se connecter</button>' +
         '</form>' +
-        '<p class="auth-hint">Ton compte synchronise tes pièces, ton avatar et ton passe de combat sur tous tes appareils.</p>' +
+        '<p class="auth-hint">Ton compte synchronise tes pièces, ton avatar et ton Pass Saison sur tous tes appareils.</p>' +
       '</div>';
     document.body.appendChild(overlay);
     return overlay;

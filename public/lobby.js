@@ -134,6 +134,7 @@
       (data.peers || []).forEach((id) => {
         if (voice) voice.callPeer(id);
       });
+      setTimeout(updateVoiceConnectionStatus, 300);
     });
 
     socket.on('voice_peer_joined', (data) => {
@@ -141,6 +142,7 @@
         players[data.id].inVoice = true;
         updateVoiceIndicator(data.id);
       }
+      setTimeout(updateVoiceConnectionStatus, 300);
     });
 
     socket.on('voice_peer_left', (data) => {
@@ -149,6 +151,7 @@
         updateVoiceIndicator(data.id);
       }
       if (voice) voice.closePeer(data.id);
+      updateVoiceConnectionStatus();
     });
 
     socket.on('webrtc_signal', (msg) => {
@@ -275,7 +278,9 @@
   function joinVoice() {
     ensureSocket();
     if (!socket.connected) return;
-    voice = window.GGVoice.createVoiceManager(socket, {});
+    voice = window.GGVoice.createVoiceManager(socket, {
+      onConnectionStateChange: updateVoiceConnectionStatus
+    });
     voice.getLocalStream().then(() => {
       inVoice = true;
       if (players[myId]) {
@@ -285,10 +290,36 @@
       socket.emit('voice_join');
       elVoiceBtn.textContent = '🔇 Quitter le vocal';
       elVoiceBtn.classList.add('active');
-      elVoiceStatus.textContent = 'Vocal activé — micro ouvert';
+      updateVoiceConnectionStatus();
     }).catch(() => {
-      elVoiceStatus.textContent = "Impossible d'accéder au micro.";
+      elVoiceStatus.textContent = "Impossible d'accéder au micro. Vérifie l'autorisation du navigateur.";
     });
+  }
+
+  // Affiche un statut réaliste du vocal : nombre de joueurs réellement connectés en audio,
+  // pas juste "micro ouvert" (qui ne garantit pas que l'audio circule bien entre les deux pairs).
+  function updateVoiceConnectionStatus() {
+    if (!inVoice || !voice) return;
+    const ids = Object.keys(voice.peers || {});
+    if (ids.length === 0) {
+      elVoiceStatus.textContent = 'Vocal activé — micro ouvert (en attente d’un autre joueur)';
+      return;
+    }
+    const connected = ids.filter((id) => {
+      const st = voice.peers[id] && voice.peers[id].iceConnectionState;
+      return st === 'connected' || st === 'completed';
+    });
+    const failed = ids.filter((id) => {
+      const st = voice.peers[id] && voice.peers[id].iceConnectionState;
+      return st === 'failed';
+    });
+    if (connected.length > 0) {
+      elVoiceStatus.textContent = `Vocal activé — connecté avec ${connected.length} joueur${connected.length > 1 ? 's' : ''}`;
+    } else if (failed.length > 0) {
+      elVoiceStatus.textContent = 'Connexion vocale impossible avec cet appareil (réseau trop restrictif). Réessaie ou change de réseau.';
+    } else {
+      elVoiceStatus.textContent = 'Vocal activé — connexion en cours...';
+    }
   }
 
   function leaveVoice() {

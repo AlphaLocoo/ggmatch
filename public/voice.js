@@ -4,7 +4,15 @@
    Signalisation relayée via socket.io ('webrtc_signal')
    ============================================ */
 (function () {
-  const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+  // STUN seul échoue souvent entre deux réseaux différents (NAT strict / 4G / Wi-Fi pro).
+  // On ajoute des serveurs TURN publics (Open Relay Project) pour relayer l'audio
+  // quand la connexion directe pair-à-pair n'est pas possible.
+  const ICE_SERVERS = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+  ];
 
   function createVoiceManager(socket, opts) {
     opts = opts || {};
@@ -29,6 +37,9 @@
         if (e.candidate) {
           socket.emit('webrtc_signal', { to: id, data: { type: 'candidate', candidate: e.candidate } });
         }
+      };
+      pc.oniceconnectionstatechange = () => {
+        if (opts.onConnectionStateChange) opts.onConnectionStateChange(id, pc.iceConnectionState);
       };
       pc.ontrack = (e) => {
         let audio = audioEls[id];

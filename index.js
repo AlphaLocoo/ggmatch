@@ -755,7 +755,7 @@ app.post('/create-battlepass-checkout', requireAuth, async (req, res) => {
         price_data: {
           currency: 'eur',
           unit_amount: Math.round(BATTLEPASS_PRICE_EUR * 100),
-          product_data: { name: `Passe de combat Premium — ${universe}` }
+          product_data: { name: `Pass Saison Premium — ${universe}` }
         },
         quantity: 1
       }],
